@@ -1,24 +1,52 @@
-   name: ../Bubak.yml
-   on:
-     push:
-     workflow_dispatch:
-   jobs:
-     build:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: actions/setup-java@v4
-           with:
-             distribution: temurin
-             java-version: 25
-         - uses: gradle/actions/setup-gradle@v4
-           with:
-             gradle-version: current
-         - name: Build
-           run: gradle build --no-daemon
-         - uses: actions/upload-artifact@v4
-           with:
-             name: tweakkit-jar
-             path: |
-               build/libs/*.jar
-               !build/libs/*-sources.jar
+ name: Bubak
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Build
+        run: gradle build --no-daemon
+
+      - name: Inspect game classes
+        if: always()
+        run: |
+          for J in $(find $HOME/.gradle -name "*.jar" -size +5M); do
+            if unzip -l "$J" 2>/dev/null | grep -q "LightningBolt.class"; then
+              echo "#### GAME JAR: $J"
+              echo "#### ENDERMAN GOALS"
+              for C in $(unzip -l "$J" | grep -o 'net/minecraft/[A-Za-z0-9_/$]*EnderMan[A-Za-z0-9_$]*Goal\.class' | sed 's/\.class//' | tr '/' '.'); do
+                echo "== $C"
+                javap -p -cp "$J" "$C" | grep -E "canUse|canStart" || true
+              done
+              echo "#### BEACON"
+              javap -p -cp "$J" net.minecraft.world.level.block.entity.BeaconBlockEntity | grep -iE "beam|tick" || true
+              echo "#### LIGHTNING"
+              javap -p -cp "$J" net.minecraft.world.entity.LightningBolt | grep -iE "fire" || true
+              echo "#### BLOCKBEHAVIOUR"
+              javap -p -cp "$J" net.minecraft.world.level.block.state.BlockBehaviour | grep -iE "destroyprogress" || true
+              echo "#### END"
+              break
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tweakkit-jar
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
