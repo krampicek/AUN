@@ -1,0 +1,18 @@
+{
+  "text.autoconfig.tweakkit.title": "TweakKit Settings",
+
+  "text.autoconfig.tweakkit.option.antiEndermanPickup": "Anti-Enderman Block Pickup",
+  "text.autoconfig.tweakkit.option.antiEndermanPickup.@Tooltip": "Endermen can no longer pick up or place blocks.",
+
+  "text.autoconfig.tweakkit.option.hideBeaconBeamBehindTintedGlass": "Tinted Glass Hides Beacon Beam",
+  "text.autoconfig.tweakkit.option.hideBeaconBeamBehindTintedGlass.@Tooltip": "Tinted glass above a beacon hides the beam but no longer blocks its effects.",
+
+  "text.autoconfig.tweakkit.option.safeLightning": "Safe Lightning (No Fire)",
+  "text.autoconfig.tweakkit.option.safeLightning.@Tooltip": "Lightning keeps its sound and particles but never starts fires.",
+
+  "text.autoconfig.tweakkit.option.instaMineGlass": "Insta-Mine Glass",
+  "text.autoconfig.tweakkit.option.instaMineGlass.@Tooltip": "Netherite pickaxe with Efficiency V instantly breaks any glass block or pane.",
+
+  "text.autoconfig.tweakkit.option.instaMineDeepslateWithHaste": "Insta-Mine Deepslate (Haste II)",
+  "text.autoconfig.tweakkit.option.instaMineDeepslateWithHaste.@Tooltip": "Netherite pickaxe with Efficiency V plus Haste II instantly breaks deepslate and its variants."
+}

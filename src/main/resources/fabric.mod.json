@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "tweakkit",
+  "version": "${version}",
+  "name": "TweakKit",
+  "description": "Anti-Enderman griefing, hidden beacon beams behind tinted glass, safe lightning and insta-mining tweaks. Every feature is toggleable in-game.",
+  "authors": ["YourName"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.example.tweakkit.TweakKit"],
+    "modmenu": ["dev.example.tweakkit.client.ModMenuIntegration"]
+  },
+  "mixins": ["tweakkit.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*",
+    "cloth-config": ">=26.3"
+  },
+  "suggests": {
+    "modmenu": ">=21.0.0"
+  }
+}
