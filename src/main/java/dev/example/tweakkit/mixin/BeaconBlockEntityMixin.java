@@ -45,8 +45,8 @@ public abstract class BeaconBlockEntityMixin {
         return block;
     }
 
-    @Inject(method = "getBeamSections", at = @At("HEAD"), cancellable = true)
-    private void tweakkit$hideBeam(CallbackInfoReturnable<List<BeaconBlockEntity.BeaconBeamSection>> cir) {
+    @Inject(method = {"getBeamSections", "getBeamSegments"}, at = @At("HEAD"), cancellable = true)
+    private void tweakkit$hideBeam(CallbackInfoReturnable<List<?>> cir) {
         if (!TweakConfigManager.get().hideBeaconBeamBehindTintedGlass) {
             return;
         }
