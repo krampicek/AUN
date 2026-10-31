@@ -10,7 +10,8 @@
     "TintedGlassBlockMixin",
     "BeaconBlockEntityMixin",
     "BlockBehaviourMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "BlockStateBaseMixin"
   ],
   "injectors": {
     "defaultRequire": 0
