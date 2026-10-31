@@ -4,14 +4,12 @@
   "package": "dev.example.tweakkit.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "EndermanTakeBlockGoalMixin",
-    "EndermanLeaveBlockGoalMixin",
+    "MobMixin",
     "LightningBoltMixin",
     "TintedGlassBlockMixin",
     "BeaconBlockEntityMixin",
     "BlockBehaviourMixin",
-    "LivingEntityMixin",
-    "BlockStateBaseMixin"
+    "LivingEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 0
