@@ -1,5 +1,5 @@
 package dev.example.tweakkit.mixin;
-
+ 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -11,12 +11,12 @@ import net.minecraft.world.level.block.entity.BeaconBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-
+ 
 /**
  * Feature 2 - tinted glass hides the beacon beam while the effects keep working.
  *
  * Only the SERVER is changed: when the beacon scans upwards and meets tinted glass, the
- * server pretends it is black stained glass. Stained glass lets the beam pass, so the
+ * server pretends it is a beacon block, which lets the beam pass, so the
  * beacon stays active and keeps giving its effects.
  *
  * The CLIENT is not touched at all. In vanilla, tinted glass blocks the beam on the client,
@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(BeaconBlockEntity.class)
 public abstract class BeaconBlockEntityMixin {
-
+ 
     @WrapOperation(
         method = "tick",
         at = @At(value = "INVOKE",
@@ -39,8 +39,9 @@ public abstract class BeaconBlockEntityMixin {
         if (block == Blocks.TINTED_GLASS
             && !level.isClientSide()
             && TweakConfigManager.get().hideBeaconBeamBehindTintedGlass) {
-            return Blocks.BLACK_STAINED_GLASS;
+            return Blocks.BEACON;
         }
         return block;
     }
 }
+ 
