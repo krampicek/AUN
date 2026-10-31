@@ -1,4 +1,4 @@
- name: Bubak
+name: Bubak
 
 on:
   push:
