@@ -1,6 +1,7 @@
 package dev.example.tweakkit;
 
 import dev.example.tweakkit.config.TweakConfigManager;
+import dev.example.tweakkit.gamerule.TweakGameRules;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ public class TweakKit implements ModInitializer {
     @Override
     public void onInitialize() {
         TweakConfigManager.register();
+        TweakGameRules.register();
         LOGGER.info("TweakKit initialised - config loaded from config/{}.json", MOD_ID);
     }
 }

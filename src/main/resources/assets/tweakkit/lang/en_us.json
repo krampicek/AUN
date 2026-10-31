@@ -14,5 +14,14 @@
   "text.autoconfig.tweakkit.option.instaMineGlass.@Tooltip": "Netherite pickaxe with Efficiency V instantly breaks any glass block or pane.",
 
   "text.autoconfig.tweakkit.option.instaMineDeepslateWithHaste": "Insta-Mine Deepslate (Haste II)",
-  "text.autoconfig.tweakkit.option.instaMineDeepslateWithHaste.@Tooltip": "Netherite pickaxe with Efficiency V plus Haste II instantly breaks deepslate and its variants."
+  "text.autoconfig.tweakkit.option.instaMineDeepslateWithHaste.@Tooltip": "Netherite pickaxe with Efficiency V plus Haste II instantly breaks deepslate and its variants.",
+
+  "gamerule.tweakkit.macenerfdmgplayer": "Mace nerf (player vs player)",
+  "gamerule.tweakkit.macenerfdmgplayer.description": "A mace smash from a player always deals exactly 1 HP to another player.",
+
+  "gamerule.tweakkit.maceplayerthorns": "Mace thorns boost (player vs player)",
+  "gamerule.tweakkit.maceplayerthorns.description": "When a player smashes another player with a mace, the victim's Thorns hit harder.",
+
+  "gamerule.tweakkit.maceplayerthornslevel": "Mace thorns boost in percent",
+  "gamerule.tweakkit.maceplayerthornslevel.description": "Extra Thorns damage in percent. 0 = normal, 100 = double, 150 = 2.5 times."
 }

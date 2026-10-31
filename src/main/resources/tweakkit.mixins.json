@@ -9,7 +9,8 @@
     "LightningBoltMixin",
     "TintedGlassBlockMixin",
     "BeaconBlockEntityMixin",
-    "BlockBehaviourMixin"
+    "BlockBehaviourMixin",
+    "LivingEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 0
