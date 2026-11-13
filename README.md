@@ -1,9 +1,11 @@
-# TweakKit (Fabric, Minecraft 26.3, Java 25, Mojang mappings)
+# A-U-N (Fabric, Minecraft 26.3)
 
-Easiest setup: generate a blank 26.3 project at https://fabricmc.net/develop/ and copy in
-`src/` plus the dependency lines from build.gradle (plugin id / Loom version may differ).
+Features (all toggleable in Mods -> A-U-N -> Configure):
+Anti-Enderman pickup, tinted-glass beacon beam hiding, safe lightning, insta-mine glass,
+insta-mine deepslate (Haste II), reach behind item frames, cut through tall grass,
+dismount villagers by clicking, speed potions for Happy Ghasts, armor stand gear swap.
 
-Build: `./gradlew build`  ->  build/libs/tweakkit-1.0.0.jar
-Requires: Fabric API, Cloth Config (26.3.x). Optional: Mod Menu (21.x).
-Config file: config/tweakkit.json
-Install on BOTH client and server for multiplayer.
+Game rule (not in the menu):  /gamerule aun:macenerfdmgplayer true|false
+
+Requires: Fabric API, Cloth Config. Optional: Mod Menu.
+Config file: config/aun.json

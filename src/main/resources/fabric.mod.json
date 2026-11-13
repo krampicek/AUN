@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "aun",
+  "version": "${version}",
+  "name": "A-U-N",
+  "description": "Quality-of-life and balance tweaks. Every feature can be switched on and off in-game.",
+  "authors": ["YourName"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.example.aun.Aun"],
+    "client": ["dev.example.aun.client.AunClient"],
+    "modmenu": ["dev.example.aun.client.ModMenuIntegration"]
+  },
+  "mixins": ["aun.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*",
+    "cloth-config": ">=26.3"
+  },
+  "suggests": {
+    "modmenu": ">=21.0.0"
+  }
+}

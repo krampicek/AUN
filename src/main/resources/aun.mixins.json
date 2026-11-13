@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.example.aun.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MobMixin",
+    "LightningBoltMixin",
+    "BeaconBlockEntityMixin",
+    "BlockBehaviourMixin",
+    "LivingEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
