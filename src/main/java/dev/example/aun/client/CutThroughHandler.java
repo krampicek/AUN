@@ -4,7 +4,6 @@ import dev.example.aun.config.AunConfigManager;
 import net.fabricmc.fabric.api.event.client.player.ClientPreAttackCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -50,7 +49,6 @@ public final class CutThroughHandler {
                 return false;
             }
             client.gameMode.attack(player, target);
-            player.swing(InteractionHand.MAIN_HAND);
             return true; // we handled the attack
         });
     }
