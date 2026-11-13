@@ -4,7 +4,7 @@ import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -44,10 +44,10 @@ public abstract class MobMixin {
         if (self.level().isClientSide() || self.tickCount % 5 != 0) {
             return;
         }
-        EntityType<?> type = self.getType();
-        if (type == EntityType.ENDERMAN) {
+        String type = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType()).getPath();
+        if (type.equals("enderman")) {
             this.aun$endermanGoals();
-        } else if (type == EntityType.HAPPY_GHAST) {
+        } else if (type.equals("happy_ghast")) {
             this.aun$happyGhastSpeed(self);
         }
     }
