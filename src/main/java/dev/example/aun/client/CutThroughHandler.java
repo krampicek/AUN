@@ -1,7 +1,7 @@
 package dev.example.aun.client;
 
 import dev.example.aun.config.AunConfigManager;
-import net.fabricmc.fabric.api.client.event.player.ClientPreAttackCallback;
+import net.fabricmc.fabric.api.event.client.player.ClientPreAttackCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
