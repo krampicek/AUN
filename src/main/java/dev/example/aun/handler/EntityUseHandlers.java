@@ -10,7 +10,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -77,7 +76,8 @@ public final class EntityUseHandlers {
 
     // ---- C) dismount villagers -------------------------------------------------------
     private static boolean isSeatedVillager(Entity entity) {
-        if (entity.getType() != EntityType.VILLAGER && entity.getType() != EntityType.WANDERING_TRADER) {
+        String self = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
+        if (!self.equals("villager") && !self.equals("wandering_trader")) {
             return false;
         }
         Entity vehicle = entity.getVehicle();
