@@ -19,5 +19,7 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Gui.Tooltip public boolean cutThrough = true;
     @ConfigEntry.Gui.Tooltip public boolean dismountOnClick = true;
     @ConfigEntry.Gui.Tooltip public boolean speedHappyGhast = true;
+    /** Strength of the Happy Ghast boost in percent. 100 = default, 200 = double, 0 = none. */
+    @ConfigEntry.Gui.Tooltip public int happyGhastSpeedPercent = 100;
     @ConfigEntry.Gui.Tooltip public boolean armorStandSwap = true;
 }
