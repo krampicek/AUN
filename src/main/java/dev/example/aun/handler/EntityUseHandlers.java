@@ -2,6 +2,7 @@ package dev.example.aun.handler;
 
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
+import dev.example.aun.util.Reflect;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -109,7 +110,7 @@ public final class EntityUseHandlers {
         double speed = horse.getAttributeValue(Attributes.MOVEMENT_SPEED) * 43.17;
         double j = horse.getAttributeValue(Attributes.JUMP_STRENGTH);
         double jump = -0.1817584952 * j * j * j + 3.689713992 * j * j + 2.128599134 * j - 0.343930367;
-        player.displayClientMessage(Component.literal(String.format(Locale.ROOT,
-            "Speed: %.1f blocks/s   Jump: %.1f blocks", speed, jump)), true);
+        Reflect.actionBar(player, Component.literal(String.format(Locale.ROOT,
+            "Speed: %.1f blocks/s   Jump: %.1f blocks", speed, jump)));
     }
 }

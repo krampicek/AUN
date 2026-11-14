@@ -69,42 +69,41 @@ tasks.register('inspectGameApi') {
             def zip = new java.util.zip.ZipFile(gameJar)
             try { zip.entries().each { if (it.name.endsWith('.class')) names << it.name } } finally { zip.close() }
 
-            def listClasses = { String regex ->
-                println "AUNAPI #### classes: ${regex}"
-                names.findAll { it =~ regex }.sort().each { println "AUNAPI ${it}" }
-            }
             def members = { String cls, String filter ->
                 def process = new ProcessBuilder(javap, '-p', '-cp', gameJar.absolutePath, cls).redirectErrorStream(true).start()
                 def lines = process.inputStream.text.readLines()
                 println "AUNAPI #### ${cls}"
                 lines.findAll { filter == null || (it =~ filter) }.each { println "AUNAPI ${it.trim()}" }
             }
-            def membersOfMatching = { String regex, String filter ->
-                names.findAll { it =~ regex }.sort().each { members(it.replace('.class', '').replace('/', '.'), filter) }
-            }
 
-            listClasses('net/minecraft/client/KeyMapping')
-            listClasses('net/minecraft/client/input/')
-            listClasses('net/minecraft/client/gui/GuiGraphics')
-            listClasses('net/minecraft/client/gui/screens/worldselection/')
-            listClasses('net/minecraft/client/gui/screens/inventory/(Container|ShulkerBox|AbstractContainer)')
-            listClasses('(?i)(locator|waypoint)')
-            listClasses('(?i)Enderpearl')
-            listClasses('(?i)(HorseInventory|BundleTooltip|BundleContents)')
-
-            members('net.minecraft.client.KeyMapping', '(KeyMapping\\(|Category)')
-            membersOfMatching('net/minecraft/client/KeyMapping\\$Category', null)
-            members('net.minecraft.client.gui.screens.Screen', '(keyPressed|mouseScrolled|mouseClicked|charTyped|render|extract|addRenderableWidget)')
-            members('net.minecraft.client.gui.screens.inventory.AbstractContainerScreen', '(init|render|extract|mouse|key|char|hovered|Slot|imageWidth|leftPos|topPos|titleLabel)')
-            members('net.minecraft.client.gui.components.EditBox', '(EditBox\\(|setValue|getValue|setResponder|setHint|render|extract)')
-            membersOfMatching('net/minecraft/client/gui/GuiGraphics[^/]*\\.class', '(fill|text|Text|item|Item|blit|outline|string|String)')
-            members('net.minecraft.client.gui.screens.inventory.BookViewScreen', '(mouse|page|Page|key)')
-            members('net.minecraft.world.entity.player.Inventory', '(elected|setItem|add)')
-            members('net.minecraft.server.level.ServerPlayer', '(?i)pearl')
-            membersOfMatching('(?i)ThrownEnderpearl\\.class', null)
-            membersOfMatching('net/minecraft/client/gui/screens/worldselection/(WorldSelectionList|SelectWorldScreen)[^/]*\\.class', null)
-            members('net.minecraft.world.level.storage.LevelStorageSource$LevelStorageAccess', '(?i)(delete|trash)')
-            members('net.minecraft.world.level.storage.LevelSummary', null)
+            members('net.minecraft.world.entity.Entity', '(?i)tag')
+            members('net.minecraft.world.entity.player.Player', '(?i)(message|overlay)')
+            members('net.minecraft.server.level.ServerPlayer', '(?i)(message|overlay)')
+            members('net.minecraft.world.entity.item.ItemEntity', '(?i)(age|lifetime|thrower|owner)')
+            members('net.minecraft.client.input.KeyEvent', null)
+            members('net.minecraft.client.input.MouseButtonEvent', null)
+            members('net.minecraft.client.input.CharacterEvent', null)
+            members('net.minecraft.client.input.InputWithModifiers', null)
+            members('net.minecraft.world.inventory.ContainerInput', null)
+            members('net.minecraft.world.inventory.Slot', '(container|getItem|index|public)')
+            members('net.minecraft.world.item.component.ItemContainerContents', '(?i)(items|stream|nonEmpty|copy)')
+            members('net.minecraft.world.item.component.BundleContents', '(?i)(items|size|isEmpty|weight)')
+            members('net.minecraft.client.gui.screens.inventory.tooltip.ClientBundleTooltip', null)
+            members('net.minecraft.client.Options', '(?i)(keyDrop|keyAttack|keyInventory|keySprint|keyUse|gamma|fullscreen)')
+            members('net.minecraft.client.gui.contextualbar.LocatorBar', null)
+            members('com.mojang.blaze3d.platform.Window', '(?i)(fullscreen|decorat|borderless|getWindow|getScreenWidth|monitor|setWindowed|toggle)')
+            members('net.minecraft.client.Minecraft', '(?i)(getWindow|font|setScreen|screen;|options;)')
+            members('net.minecraft.client.gui.components.AbstractWidget', '(?i)(focus|keyPressed|canConsume|setX|setY|setWidth|getX|getY)')
+            members('net.minecraft.client.gui.components.Button', '(?i)(builder|Builder)')
+            members('net.minecraft.client.gui.components.Button$Builder', null)
+            members('net.minecraft.world.level.storage.LevelStorageSource', '(?i)(delete|trash|backup|recover|levelDirectory|getBaseDir)')
+            members('net.minecraft.world.level.storage.LevelStorageSource$LevelStorageAccess', '(?i)(delete|trash|getLevelDirectory|getLevelId)')
+            members('net.minecraft.client.player.LocalPlayer', '(?i)sprint')
+            members('net.minecraft.client.gui.screens.inventory.EffectsInInventory', null)
+            names.findAll { it =~ 'net/minecraft/client/renderer/entity/layers/.*Armor.*' }.sort().each { println "AUNAPI ${it}" }
+            names.findAll { it =~ 'net/minecraft/client/renderer/entity/state/(Player|Humanoid|Avatar).*' }.sort().each { println "AUNAPI ${it}" }
+            names.findAll { it =~ 'net/minecraft/client/gui/screens/(PackSelectionScreen|.*Pack.*)' }.sort().each { println "AUNAPI ${it}" }
+            names.findAll { it =~ '(?i)ServerPackManager|PackCompat|PackSource' }.sort().each { println "AUNAPI ${it}" }
         } catch (Throwable t) {
             println "AUNAPI inspection failed: ${t}"
         }

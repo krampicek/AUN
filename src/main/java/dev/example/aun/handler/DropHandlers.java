@@ -2,6 +2,7 @@ package dev.example.aun.handler;
 
 import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
+import dev.example.aun.util.Reflect;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
@@ -35,7 +36,7 @@ public final class DropHandlers {
             if (!AunConfigManager.get().playerDropsNeverDespawn || !(entity instanceof ItemEntity item)) {
                 return;
             }
-            Set<String> tags = item.getTags();
+            Set<String> tags = Reflect.tagsOf(item);
             if (tags.contains(Aun.DROP_TAG) && !tags.contains(Aun.sessionTag())) {
                 item.discard();
             }
@@ -50,7 +51,7 @@ public final class DropHandlers {
             for (ServerLevel level : server.getAllLevels()) {
                 List<Entity> doomed = new ArrayList<>();
                 for (Entity entity : level.getAllEntities()) {
-                    if (entity instanceof ItemEntity item && item.getTags().contains(Aun.DROP_TAG)) {
+                    if (entity instanceof ItemEntity item && Reflect.tagsOf(item).contains(Aun.DROP_TAG)) {
                         doomed.add(entity);
                     }
                 }

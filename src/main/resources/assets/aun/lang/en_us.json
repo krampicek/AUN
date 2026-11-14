@@ -57,6 +57,9 @@
   "text.autoconfig.aun.option.safeRedstone": "Safe Redstone",
   "text.autoconfig.aun.option.safeRedstone.@Tooltip": "Water cannot wash away redstone wire, torches, repeaters or comparators; it flows around them.",
 
+  "text.autoconfig.aun.option.enderPearlFix": "Ender Pearl Fix",
+  "text.autoconfig.aun.option.enderPearlFix.@Tooltip": "Fixes MC-306936: ender pearls that were removed no longer come back when you log in.",
+
   "gamerule.aun.macenerfdmgplayer": "Mace nerf (player vs player)",
   "gamerule.aun.macenerfdmgplayer.description": "A mace smash from a player always deals exactly 1 HP to another player."
 }

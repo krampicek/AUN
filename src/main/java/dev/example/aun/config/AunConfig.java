@@ -45,4 +45,5 @@ public class AunConfig implements ConfigData {
     // ------------------------------ Fixes ----------------------------
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean piglinPortalFix = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean safeRedstone = true;
+    @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean enderPearlFix = true;
 }

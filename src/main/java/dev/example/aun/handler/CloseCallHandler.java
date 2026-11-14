@@ -1,6 +1,7 @@
 package dev.example.aun.handler;
 
 import dev.example.aun.config.AunConfigManager;
+import dev.example.aun.util.Reflect;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.network.chat.Component;
@@ -44,8 +45,8 @@ public final class CloseCallHandler {
             if (player.getInventory().getItem(slot).isEmpty()) {
                 player.getInventory().setItem(slot, held.copy());
                 player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-                player.displayClientMessage(
-                    Component.literal("That tool was about to break - it was moved to your inventory."), true);
+                Reflect.actionBar(player, 
+                    Component.literal("That tool was about to break - it was moved to your inventory."));
                 return true;
             }
         }

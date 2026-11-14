@@ -14,7 +14,8 @@
     "NetherPortalBlockMixin",
     "FlowingFluidMixin",
     "AnvilMenuMixin",
-    "BlockDropMixin"
+    "BlockDropMixin",
+    "ServerPlayerMixin"
   ],
   "client": [
     "AnvilScreenMixin"
