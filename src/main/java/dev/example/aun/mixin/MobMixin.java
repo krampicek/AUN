@@ -3,6 +3,11 @@ package dev.example.aun.mixin;
 import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.world.effect.MobEffectInstance;
+package dev.example.aun.mixin;
+
+import dev.example.aun.Aun;
+import dev.example.aun.config.AunConfigManager;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Mob;
@@ -88,7 +93,7 @@ public abstract class MobMixin {
             // i.e. Speed I -> x1.8 and Speed II -> x2.1 flying speed.
             // The menu value scales only the extra speed: 200 = double the extra, 50 = half, 0 = none.
             double defaultBonus = (1.0 + 0.2 * (speed.getAmplifier() + 1)) * 1.5 - 1.0;
-            int percent = Math.max(0, Math.min(1000, AunConfigManager.get().happyGhastSpeedPercent));
+            int percent = aun$parsePercent(AunConfigManager.get().happyGhastBoost);
             double amount = defaultBonus * percent / 100.0;
             if (current == null || current.amount() != amount) {
                 flying.addOrUpdateTransientModifier(new AttributeModifier(
@@ -96,6 +101,17 @@ public abstract class MobMixin {
             }
         } else if (current != null) {
             flying.removeModifier(Aun.GHAST_SPEED_ID);
+        }
+    }
+
+    /** Reads the text typed in the menu ("150", "150%", " 150 "). Bad input falls back to 100. */
+    @Unique
+    private static int aun$parsePercent(String text) {
+        try {
+            int value = Integer.parseInt(text.trim().replace("%", "").trim());
+            return Math.max(0, Math.min(1000, value));
+        } catch (RuntimeException e) {
+            return 100;
         }
     }
 }
