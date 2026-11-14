@@ -33,8 +33,8 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean instaMineGlass = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean instaMineDeepslateWithHaste = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean speedHappyGhast = true;
-    /** Strength of the Happy Ghast boost in percent. 100 = default, 200 = double, 0 = none. */
-    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public int happyGhastSpeedPercent = 100;
+    /** Strength of the Happy Ghast boost in percent, typed as text. 100 = default, 200 = double, 0 = none. */
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public String happyGhastBoost = "100";
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noBatSpawning = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean anvilNoTooExpensive = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean playerDropsNeverDespawn = true;
