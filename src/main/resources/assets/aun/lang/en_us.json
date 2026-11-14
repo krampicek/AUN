@@ -24,6 +24,13 @@
   "text.autoconfig.aun.option.fastLeafDecay": "Fast Leaf Decay",
   "text.autoconfig.aun.option.fastLeafDecay.@Tooltip": "After you cut a tree down its leaves vanish quickly. Only naturally grown leaves are affected, never leaves placed by players.",
 
+  "text.autoconfig.aun.option.horseInfo": "Horse Info",
+  "text.autoconfig.aun.option.horseInfo.@Tooltip": "Right-click a horse, donkey or mule to see its speed (blocks per second) and jump height (blocks) above your hotbar.",
+  "text.autoconfig.aun.option.closeCall": "It Was Close",
+  "text.autoconfig.aun.option.closeCall.@Tooltip": "A tool with only 1 use left is moved from your hotbar into your inventory so it cannot break while you mine.",
+  "text.autoconfig.aun.option.autoToolSwitch": "Switch Tools While Mining",
+  "text.autoconfig.aun.option.autoToolSwitch.@Tooltip": "When you start mining a block, your hotbar jumps to the tool that mines it fastest.",
+
   "text.autoconfig.aun.option.antiEndermanPickup": "Anti-Enderman Block Pickup",
   "text.autoconfig.aun.option.antiEndermanPickup.@Tooltip": "Endermen can no longer pick up or place blocks.",
   "text.autoconfig.aun.option.hideBeaconBeamBehindTintedGlass": "Tinted Glass Hides Beacon Beam",
@@ -43,7 +50,7 @@
   "text.autoconfig.aun.option.anvilNoTooExpensive": "No \"Too Expensive!\" In Anvils",
   "text.autoconfig.aun.option.anvilNoTooExpensive.@Tooltip": "Removes the 40-level limit of the anvil.",
   "text.autoconfig.aun.option.playerDropsNeverDespawn": "Player Drops Never Despawn",
-  "text.autoconfig.aun.option.playerDropsNeverDespawn.@Tooltip": "Items you drop (or your items when you die) do not disappear after 5 minutes. Other items still despawn normally.",
+  "text.autoconfig.aun.option.playerDropsNeverDespawn.@Tooltip": "Items you drop (or your items when you die) do not disappear after 5 minutes, but they are removed when you leave the world. Other items still despawn normally.",
 
   "text.autoconfig.aun.option.piglinPortalFix": "Piglin Portal Fix",
   "text.autoconfig.aun.option.piglinPortalFix.@Tooltip": "Nether portals no longer spawn zombified piglins.",

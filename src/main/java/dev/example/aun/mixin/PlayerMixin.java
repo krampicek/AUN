@@ -1,5 +1,6 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -26,6 +27,8 @@ public abstract class PlayerMixin {
         ItemEntity item = cir.getReturnValue();
         if (item != null && AunConfigManager.get().playerDropsNeverDespawn) {
             item.setUnlimitedLifetime();
+            item.addTag(Aun.DROP_TAG);
+            item.addTag(Aun.sessionTag());
         }
     }
 }

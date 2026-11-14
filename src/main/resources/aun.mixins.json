@@ -13,7 +13,8 @@
     "DoorBlockMixin",
     "NetherPortalBlockMixin",
     "FlowingFluidMixin",
-    "AnvilMenuMixin"
+    "AnvilMenuMixin",
+    "BlockDropMixin"
   ],
   "client": [
     "AnvilScreenMixin"

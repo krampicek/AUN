@@ -46,3 +46,68 @@ java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
+
+// ---------------------------------------------------------------------------------
+// Prints information about Minecraft's own classes into the build log (lines start
+// with AUNAPI). It is only used to write new features correctly and never fails the build.
+// ---------------------------------------------------------------------------------
+tasks.register('inspectGameApi') {
+    doLast {
+        try {
+            def gameJar = null
+            for (File f : fileTree(dir: new File(System.getProperty('user.home'), '.gradle'), include: '**/*.jar').files) {
+                if (f.length() < 20_000_000L) continue
+                def zip = new java.util.zip.ZipFile(f)
+                try {
+                    if (zip.getEntry('net/minecraft/world/entity/LightningBolt.class') != null) { gameJar = f; break }
+                } finally { zip.close() }
+            }
+            if (gameJar == null) { println 'AUNAPI game jar not found'; return }
+
+            def javap = new File(System.getProperty('java.home'), 'bin/javap').absolutePath
+            def names = []
+            def zip = new java.util.zip.ZipFile(gameJar)
+            try { zip.entries().each { if (it.name.endsWith('.class')) names << it.name } } finally { zip.close() }
+
+            def listClasses = { String regex ->
+                println "AUNAPI #### classes: ${regex}"
+                names.findAll { it =~ regex }.sort().each { println "AUNAPI ${it}" }
+            }
+            def members = { String cls, String filter ->
+                def process = new ProcessBuilder(javap, '-p', '-cp', gameJar.absolutePath, cls).redirectErrorStream(true).start()
+                def lines = process.inputStream.text.readLines()
+                println "AUNAPI #### ${cls}"
+                lines.findAll { filter == null || (it =~ filter) }.each { println "AUNAPI ${it.trim()}" }
+            }
+            def membersOfMatching = { String regex, String filter ->
+                names.findAll { it =~ regex }.sort().each { members(it.replace('.class', '').replace('/', '.'), filter) }
+            }
+
+            listClasses('net/minecraft/client/KeyMapping')
+            listClasses('net/minecraft/client/input/')
+            listClasses('net/minecraft/client/gui/GuiGraphics')
+            listClasses('net/minecraft/client/gui/screens/worldselection/')
+            listClasses('net/minecraft/client/gui/screens/inventory/(Container|ShulkerBox|AbstractContainer)')
+            listClasses('(?i)(locator|waypoint)')
+            listClasses('(?i)Enderpearl')
+            listClasses('(?i)(HorseInventory|BundleTooltip|BundleContents)')
+
+            members('net.minecraft.client.KeyMapping', '(KeyMapping\\(|Category)')
+            membersOfMatching('net/minecraft/client/KeyMapping\\$Category', null)
+            members('net.minecraft.client.gui.screens.Screen', '(keyPressed|mouseScrolled|mouseClicked|charTyped|render|extract|addRenderableWidget)')
+            members('net.minecraft.client.gui.screens.inventory.AbstractContainerScreen', '(init|render|extract|mouse|key|char|hovered|Slot|imageWidth|leftPos|topPos|titleLabel)')
+            members('net.minecraft.client.gui.components.EditBox', '(EditBox\\(|setValue|getValue|setResponder|setHint|render|extract)')
+            membersOfMatching('net/minecraft/client/gui/GuiGraphics[^/]*\\.class', '(fill|text|Text|item|Item|blit|outline|string|String)')
+            members('net.minecraft.client.gui.screens.inventory.BookViewScreen', '(mouse|page|Page|key)')
+            members('net.minecraft.world.entity.player.Inventory', '(elected|setItem|add)')
+            members('net.minecraft.server.level.ServerPlayer', '(?i)pearl')
+            membersOfMatching('(?i)ThrownEnderpearl\\.class', null)
+            membersOfMatching('net/minecraft/client/gui/screens/worldselection/(WorldSelectionList|SelectWorldScreen)[^/]*\\.class', null)
+            members('net.minecraft.world.level.storage.LevelStorageSource$LevelStorageAccess', '(?i)(delete|trash)')
+            members('net.minecraft.world.level.storage.LevelSummary', null)
+        } catch (Throwable t) {
+            println "AUNAPI inspection failed: ${t}"
+        }
+    }
+}
+tasks.named('compileJava') { finalizedBy 'inspectGameApi' }

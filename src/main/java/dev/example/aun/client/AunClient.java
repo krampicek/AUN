@@ -7,5 +7,6 @@ public class AunClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CutThroughHandler.register();
+        AutoToolSwitch.register();
     }
 }

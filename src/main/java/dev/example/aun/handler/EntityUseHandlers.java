@@ -5,6 +5,10 @@ import dev.example.aun.config.AunConfigManager;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import java.util.Locale;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -37,6 +41,10 @@ public final class EntityUseHandlers {
             }
             AunConfig cfg = AunConfigManager.get();
 
+            if (cfg.horseInfo && !level.isClientSide() && !player.isShiftKeyDown()
+                && entity instanceof LivingEntity living && isHorseLike(entity)) {
+                showHorseInfo(player, living); // informational only, mounting works as usual
+            }
             if (cfg.armorStandSwap && entity instanceof ArmorStand stand && player.isShiftKeyDown()) {
                 return swapArmor(player, level, stand);
             }
@@ -87,5 +95,21 @@ public final class EntityUseHandlers {
         }
         level.playSound(null, stand.blockPosition(), SoundEvents.ARMOR_STAND_PLACE, SoundSource.PLAYERS, 1.0F, 1.0F);
         return InteractionResult.SUCCESS;
+    }
+
+    // ---- Horse info ------------------------------------------------------------------
+    private static boolean isHorseLike(Entity entity) {
+        String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
+        return id.equals("horse") || id.equals("donkey") || id.equals("mule")
+            || id.equals("skeleton_horse") || id.equals("zombie_horse");
+    }
+
+    /** Shows speed (blocks per second) and jump height (blocks) above the hotbar. */
+    private static void showHorseInfo(Player player, LivingEntity horse) {
+        double speed = horse.getAttributeValue(Attributes.MOVEMENT_SPEED) * 43.17;
+        double j = horse.getAttributeValue(Attributes.JUMP_STRENGTH);
+        double jump = -0.1817584952 * j * j * j + 3.689713992 * j * j + 2.128599134 * j - 0.343930367;
+        player.displayClientMessage(Component.literal(String.format(Locale.ROOT,
+            "Speed: %.1f blocks/s   Jump: %.1f blocks", speed, jump)), true);
     }
 }
