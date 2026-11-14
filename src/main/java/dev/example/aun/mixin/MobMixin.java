@@ -28,7 +28,7 @@ import java.util.List;
  *   Feature 1: Endermen lose their "take block" / "leave block" goals while the toggle is ON
  *              (restored when it is switched OFF).
  *   Feature D: Happy Ghasts with the Speed effect get a flying-speed bonus, like a player
- *              gets a walking-speed bonus (+20% per level).
+ *              gets a walking-speed bonus; strength set by the percentage in the menu (100 = default).
  */
 @Mixin(Mob.class)
 public abstract class MobMixin {
@@ -84,7 +84,12 @@ public abstract class MobMixin {
         AttributeModifier current = flying.getModifier(Aun.GHAST_SPEED_ID);
 
         if (AunConfigManager.get().speedHappyGhast && speed != null) {
-            double amount = 0.2 * (speed.getAmplifier() + 1);
+            // Default boost (100%): a player's Speed bonus (+20% per level) made 1.5x stronger,
+            // i.e. Speed I -> x1.8 and Speed II -> x2.1 flying speed.
+            // The menu value scales only the extra speed: 200 = double the extra, 50 = half, 0 = none.
+            double defaultBonus = (1.0 + 0.2 * (speed.getAmplifier() + 1)) * 1.5 - 1.0;
+            int percent = Math.max(0, Math.min(1000, AunConfigManager.get().happyGhastSpeedPercent));
+            double amount = defaultBonus * percent / 100.0;
             if (current == null || current.amount() != amount) {
                 flying.addOrUpdateTransientModifier(new AttributeModifier(
                     Aun.GHAST_SPEED_ID, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
