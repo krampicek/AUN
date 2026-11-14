@@ -28,7 +28,7 @@ public abstract class FlowingFluidMixin {
         cancellable = true,
         require = 0
     )
-    private void aun$protectRedstoneA(BlockGetter level, BlockPos pos, BlockState state, Fluid fluid,
+    private static void aun$protectRedstoneA(BlockGetter level, BlockPos pos, BlockState state, Fluid fluid,
                                       CallbackInfoReturnable<Boolean> cir) {
         if (aun$isProtected(state)) {
             cir.setReturnValue(false);
@@ -41,7 +41,7 @@ public abstract class FlowingFluidMixin {
         cancellable = true,
         require = 0
     )
-    private void aun$protectRedstoneB(BlockState state, CallbackInfoReturnable<Boolean> cir) {
+    private static void aun$protectRedstoneB(BlockState state, CallbackInfoReturnable<Boolean> cir) {
         if (aun$isProtected(state)) {
             cir.setReturnValue(false);
         }
