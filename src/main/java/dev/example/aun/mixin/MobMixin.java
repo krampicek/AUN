@@ -3,11 +3,6 @@ package dev.example.aun.mixin;
 import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.world.effect.MobEffectInstance;
-package dev.example.aun.mixin;
-
-import dev.example.aun.Aun;
-import dev.example.aun.config.AunConfigManager;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Mob;
