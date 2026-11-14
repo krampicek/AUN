@@ -8,7 +8,15 @@
     "LightningBoltMixin",
     "BeaconBlockEntityMixin",
     "BlockBehaviourMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "PlayerMixin",
+    "DoorBlockMixin",
+    "NetherPortalBlockMixin",
+    "FlowingFluidMixin",
+    "AnvilMenuMixin"
+  ],
+  "client": [
+    "AnvilScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

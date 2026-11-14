@@ -4,7 +4,8 @@
   "version": "${version}",
   "name": "A-U-N",
   "description": "Quality-of-life and balance tweaks. Every feature can be switched on and off in-game.",
-  "authors": ["YourName"],
+  "authors": ["krampi_"],
+  "icon": "assets/aun/icon.png",
   "license": "MIT",
   "environment": "*",
   "entrypoints": {

@@ -16,18 +16,12 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 
 /**
- * Right-click-on-entity features, all in one callback:
- *   A) Reach behind: click an item frame to open the container behind it (crouch = rotate).
- *   C) Click a villager that sits in a boat or minecart to make it get out.
- *   E) Crouch + click an armor stand to swap armor with it.
- *
- * The callback runs on both sides. The client only says "I handle this" (SUCCESS) so the
- * click is sent to the server, and the server does the real work.
+ * Right-click-on-entity features:
+ *   Reach behind item frames (crouch = rotate), dismount anything from a boat/minecart,
+ *   armor stand gear swap (crouch + click).
+ * The client only says "I handle this" (SUCCESS) so the click is sent to the server.
  */
 public final class EntityUseHandlers {
 
@@ -46,38 +40,23 @@ public final class EntityUseHandlers {
             if (cfg.armorStandSwap && entity instanceof ArmorStand stand && player.isShiftKeyDown()) {
                 return swapArmor(player, level, stand);
             }
-            if (cfg.dismountOnClick && isSeatedVillager(entity)) {
+            if (cfg.dismountOnClick && isSeatedInVehicle(entity)) {
                 if (!level.isClientSide()) {
-                    entity.stopRiding();
+                    DismountHelper.dismountToGround(entity);
                 }
                 return InteractionResult.SUCCESS;
             }
             if (cfg.reachBehind && entity instanceof ItemFrame frame && !player.isShiftKeyDown()) {
-                return openContainerBehind(player, level, frame);
+                BlockPos behind = frame.blockPosition().relative(frame.getDirection().getOpposite());
+                return BehindHelper.open(player, level, behind, frame.getDirection());
             }
             return InteractionResult.PASS;
         });
     }
 
-    // ---- A) reach behind item frames -------------------------------------------------
-    private static InteractionResult openContainerBehind(Player player, Level level, ItemFrame frame) {
-        BlockPos behind = frame.blockPosition().relative(frame.getDirection().getOpposite());
-        BlockState state = level.getBlockState(behind);
-        if (state.isAir() || state.getMenuProvider(level, behind) == null) {
-            return InteractionResult.PASS; // nothing openable behind it: normal item frame behaviour
-        }
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(behind), frame.getDirection(), behind, false);
-        InteractionResult result = state.useWithoutItem(level, player, hit);
-        return result.consumesAction() ? result : InteractionResult.PASS;
-    }
-
-    // ---- C) dismount villagers -------------------------------------------------------
-    private static boolean isSeatedVillager(Entity entity) {
-        String self = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
-        if (!self.equals("villager") && !self.equals("wandering_trader")) {
+    /** Any non-player entity that sits in a boat, raft or minecart. */
+    private static boolean isSeatedInVehicle(Entity entity) {
+        if (entity instanceof Player) {
             return false;
         }
         Entity vehicle = entity.getVehicle();
@@ -88,7 +67,6 @@ public final class EntityUseHandlers {
         return id.contains("boat") || id.contains("raft") || id.contains("minecart");
     }
 
-    // ---- E) armor stand swap ---------------------------------------------------------
     private static InteractionResult swapArmor(Player player, Level level, ArmorStand stand) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;

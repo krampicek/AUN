@@ -2,13 +2,17 @@ package dev.example.aun;
 
 import dev.example.aun.config.AunConfigManager;
 import dev.example.aun.gamerule.AunGameRules;
+import dev.example.aun.handler.AutoPickup;
+import dev.example.aun.handler.BlockUseHandlers;
 import dev.example.aun.handler.EntityUseHandlers;
+import dev.example.aun.handler.LeafDecay;
+import dev.example.aun.handler.SpawnHandlers;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A-U-N main entrypoint (client and dedicated server). */
+/** A-U-N main entrypoint (client and dedicated server). Author: krampi_ */
 public class Aun implements ModInitializer {
     public static final String MOD_ID = "aun";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
@@ -21,6 +25,10 @@ public class Aun implements ModInitializer {
         AunConfigManager.register();
         AunGameRules.register();
         EntityUseHandlers.register();
+        BlockUseHandlers.register();
+        AutoPickup.register();
+        LeafDecay.register();
+        SpawnHandlers.register();
         LOGGER.info("A-U-N initialised - config in config/{}.json", MOD_ID);
     }
 }

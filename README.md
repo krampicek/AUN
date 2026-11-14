@@ -1,6 +1,6 @@
 # A-U-N (Fabric, Minecraft 26.3)
 
-Features (all toggleable in Mods -> A-U-N -> Configure):
+Features (all toggleable in Mods -> A-U-N -> Configure, in three tabs: QOL, Vanilla+, Fixes) - by krampi_
 Anti-Enderman pickup, tinted-glass beacon beam hiding, safe lightning, insta-mine glass,
 insta-mine deepslate (Haste II), reach behind item frames, cut through tall grass,
 dismount villagers by clicking, speed potions for Happy Ghasts, armor stand gear swap.
