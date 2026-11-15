@@ -291,9 +291,8 @@ public final class AunWorldFavorites {
         for (Slot sl : s.getMenu().slots) {
             if (sl.container == hov.container && sl.hasItem() && sl.mayPickup(mc.player) && ItemStack.isSameItemSameComponents(sl.getItem(), tpl)) {
                 if (clickM != null) {
-                    try { clickM.invoke(s, sl, sl.index, 1, ContainerInput.THROW); continue; } catch (ReflectiveOperationException ignored) {}
+                    try { clickM.invoke(s, sl, sl.index, 1, ContainerInput.THROW); } catch (ReflectiveOperationException ignored) {}
                 }
-                s.getMenu().doClick(sl.index, 1, ContainerInput.THROW, mc.player);
             }
         }
         return true;
