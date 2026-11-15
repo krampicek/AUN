@@ -12,8 +12,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -43,9 +43,7 @@ public abstract class LivingEntityMixin extends Entity {
         LivingEntity self = (LivingEntity) (Object) this;
         AunConfig.HideNametagsConfig cfg = AunConfigManager.get().hideNametags;
         if (self instanceof Player) {
-            if (cfg.hidePlayerNametags) {
-                cir.setReturnValue(false);
-            }
+            if (cfg.hidePlayerNametags) cir.setReturnValue(false);
             return;
         }
         if (self instanceof Mob) {
@@ -54,7 +52,7 @@ public abstract class LivingEntityMixin extends Entity {
                 return;
             }
             boolean isTamed = (self instanceof TamableAnimal ta && ta.isTame())
-                    || (self instanceof AbstractHorse horse && horse.isTamed());
+                    || (self instanceof OwnableEntity ownable && ownable.getOwnerUUID() != null);
             if (isTamed && cfg.hideTamedMobNametags) {
                 cir.setReturnValue(false);
                 return;
@@ -110,21 +108,14 @@ public abstract class LivingEntityMixin extends Entity {
     private void aun$autoTotemRefill(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
         InteractionHand targetHand = this.aun$totemHandBeforePop;
         this.aun$totemHandBeforePop = null;
-        if (!cir.getReturnValue() || !AunConfigManager.get().autoTotem || targetHand == null) {
-            return;
-        }
-        if (!((Object) this instanceof Player player) || player.level().isClientSide()) {
-            return;
-        }
-        if (!player.getItemInHand(targetHand).isEmpty()) {
-            return;
-        }
+        if (!cir.getReturnValue() || !AunConfigManager.get().autoTotem || targetHand == null) return;
+        if (!((Object) this instanceof Player player) || player.level().isClientSide()) return;
+        if (!player.getItemInHand(targetHand).isEmpty()) return;
         Inventory inv = player.getInventory();
         for (int i = 0; i < 36; i++) {
             ItemStack stack = inv.getItem(i);
             if (stack.is(Items.TOTEM_OF_UNDYING)) {
-                ItemStack replacement = stack.split(1);
-                player.setItemInHand(targetHand, replacement);
+                player.setItemInHand(targetHand, stack.split(1));
                 break;
             }
         }
@@ -138,10 +129,7 @@ public abstract class LivingEntityMixin extends Entity {
             double ex = delta.x + look.x * 0.1D + (look.x * 1.5D - delta.x) * 0.5D;
             double ey = delta.y + look.y * 0.1D + (look.y * 1.5D - delta.y) * 0.5D;
             double ez = delta.z + look.z * 0.1D + (look.z * 1.5D - delta.z) * 0.5D;
-            double dx = newDelta.x - ex;
-            double dy = newDelta.y - ey;
-            double dz = newDelta.z - ez;
-            // If called by FireworkRocketEntity and newDelta would slow the player down, preserve current speed without adding extra speed
+            double dx = newDelta.x - ex, dy = newDelta.y - ey, dz = newDelta.z - ez;
             if (dx * dx + dy * dy + dz * dz < 1.0E-6D && newDelta.lengthSqr() < delta.lengthSqr()) {
                 newDelta = look.normalize().scale(delta.length());
             }
@@ -149,3 +137,4 @@ public abstract class LivingEntityMixin extends Entity {
         super.setDeltaMovement(newDelta);
     }
 }
+// END OF FILE
