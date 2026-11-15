@@ -8,7 +8,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.NarratorStatus;
-import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -27,22 +26,21 @@ import net.minecraft.world.phys.HitResult;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AunClientFeatures {
 
     private static KeyMapping zoomKey;
     private static KeyMapping faceIntoKey;
     private static KeyMapping faceAwayKey;
+    private static KeyMapping cachedToggleGuiKey;
+    private static boolean searchedToggleGuiKey = false;
 
     private static volatile int placeFacingMode = 0;
     private static int f1State = 0;
     private static boolean wasF1Down = false;
-    private static Field hideGuiField = null;
-    private static boolean searchedHideGuiField = false;
-
-    private static Field optionValueField = null;
-    private static boolean searchedOptionValueField = false;
-    private static Integer savedUserFov = null;
     private static Boolean lastNetherCalcState = null;
 
     private static BlockPos lastAccuratePlaceTarget = null;
@@ -51,10 +49,11 @@ public final class AunClientFeatures {
     public static Screen currentScreen = null;
     public static boolean inLocalPlayerTickEffects = false;
     public static boolean inGuiHudRender = false;
+    public static volatile boolean inGhastFireballHit = false;
 
     private static boolean armorVisualHidden = false;
-    private static long lastDamageRevealUntilMs = 0L;
-    private static int prevHurtTime = 0;
+    private static final Map<UUID, Long> DAMAGE_REVEAL_UNTIL = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> PREV_HURT_TIME = new ConcurrentHashMap<>();
 
     private static BlockPos lastLightBlockPos = null;
     private static int lastHeldLightLevel = 0;
@@ -82,11 +81,26 @@ public final class AunClientFeatures {
             {"net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper", "registerKeyBinding"}
         };
         for (String[] c : cands) {
-            try {
-                Class.forName(c[0]).getMethod(c[1], KeyMapping.class).invoke(null, key);
-                return;
-            } catch (ReflectiveOperationException ignored) {}
+            try { Class.forName(c[0]).getMethod(c[1], KeyMapping.class).invoke(null, key); return; }
+            catch (ReflectiveOperationException ignored) {}
         }
+    }
+
+    public static boolean isKeyMappingPhysicallyDown(KeyMapping km) {
+        if (km == null) return false;
+        if (km.isDown()) return true;
+        for (Field f : KeyMapping.class.getDeclaredFields()) {
+            if (f.getType() == InputConstants.Key.class) {
+                try {
+                    f.setAccessible(true);
+                    InputConstants.Key k = (InputConstants.Key) f.get(km);
+                    if (k != null && k.getType() == InputConstants.Type.KEYSYM && k.getValue() > 0) {
+                        return InputConstants.isKeyDown(k.getValue());
+                    }
+                } catch (ReflectiveOperationException ignored) {}
+            }
+        }
+        return false;
     }
 
     public static boolean isConfigKeyDown(Minecraft client, String keySpec) {
@@ -99,48 +113,26 @@ public final class AunClientFeatures {
             if (clean.equals("LSHIFT") || clean.equals("SHIFT")) return InputConstants.isKeyDown(InputConstants.KEY_LSHIFT);
             int code = InputConstants.class.getField("KEY_" + clean).getInt(null);
             return InputConstants.isKeyDown(code);
-        } catch (Throwable ignored) {
-            return false;
-        }
+        } catch (Throwable ignored) { return false; }
     }
 
-    private static void setVanillaHideGui(Options options, boolean value) {
-        if (!searchedHideGuiField) {
-            searchedHideGuiField = true;
-            for (Field f : Options.class.getDeclaredFields()) {
-                if (f.getType() == boolean.class && f.getName().toLowerCase(Locale.ROOT).contains("hidegui")) {
-                    f.setAccessible(true);
-                    hideGuiField = f;
-                    break;
+    private static KeyMapping findToggleGuiKey(Options options) {
+        if (!searchedToggleGuiKey) {
+            searchedToggleGuiKey = true;
+            for (Field field : Options.class.getDeclaredFields()) {
+                if (KeyMapping.class.isAssignableFrom(field.getType())) {
+                    try {
+                        field.setAccessible(true);
+                        KeyMapping km = (KeyMapping) field.get(options);
+                        if (km != null && km.getName().toLowerCase(Locale.ROOT).contains("togglegui")) {
+                            cachedToggleGuiKey = km;
+                            break;
+                        }
+                    } catch (ReflectiveOperationException ignored) {}
                 }
             }
         }
-        if (hideGuiField != null) {
-            try { hideGuiField.setBoolean(options, value); } catch (ReflectiveOperationException ignored) {}
-        }
-    }
-
-    private static void updateZoomFov(Minecraft client, boolean zooming) {
-        if (client.options == null) return;
-        OptionInstance<Integer> fovOpt = client.options.fov();
-        if (!searchedOptionValueField) {
-            searchedOptionValueField = true;
-            for (Field f : OptionInstance.class.getDeclaredFields()) {
-                if (f.getType() == Object.class) { f.setAccessible(true); optionValueField = f; break; }
-            }
-        }
-        if (optionValueField == null) return;
-        try {
-            int cur = fovOpt.get();
-            if (zooming) {
-                if (savedUserFov == null) savedUserFov = cur;
-                int target = Math.max(15, savedUserFov / 4);
-                if (cur != target) optionValueField.set(fovOpt, target);
-            } else if (savedUserFov != null) {
-                optionValueField.set(fovOpt, savedUserFov);
-                savedUserFov = null;
-            }
-        } catch (ReflectiveOperationException ignored) {}
+        return cachedToggleGuiKey;
     }
 
     private static void onStartTick(Minecraft client) {
@@ -164,17 +156,28 @@ public final class AunClientFeatures {
         if (cfg.borderlessFullscreen && Boolean.TRUE.equals(client.options.exclusiveFullscreen().get())) {
             client.options.exclusiveFullscreen().set(false);
         }
-        updateZoomFov(client, isZooming());
 
+        // AC: Better F1 (0 = Normal, 1 = Hide HUD only [Hand stays visible], 2 = Vanilla F1 [Both hidden])
+        KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
         if (currentScreen == null) {
-            boolean f1Down = InputConstants.isKeyDown(InputConstants.KEY_F1);
+            boolean down = toggleGuiKey != null ? isKeyMappingPhysicallyDown(toggleGuiKey) : InputConstants.isKeyDown(InputConstants.KEY_F1);
             if (cfg.betterF1) {
-                if (f1Down && !wasF1Down) f1State = (f1State + 1) % 3;
-                setVanillaHideGui(client.options, f1State == 2);
+                if (down && !wasF1Down) {
+                    if (f1State == 0) {
+                        f1State = 1;
+                        if (toggleGuiKey != null) {
+                            while (toggleGuiKey.consumeClick()) {}
+                        }
+                    } else if (f1State == 1) {
+                        f1State = 2;
+                    } else {
+                        f1State = 0;
+                    }
+                }
             } else {
                 f1State = 0;
             }
-            wasF1Down = f1Down;
+            wasF1Down = down;
         }
     }
 
@@ -189,17 +192,22 @@ public final class AunClientFeatures {
         }
 
         if (cfg.facingPlacement && currentScreen == null) {
-            boolean into = (faceIntoKey != null && faceIntoKey.isDown()) || isConfigKeyDown(client, cfg.facingIntoKey);
-            boolean away = (faceAwayKey != null && faceAwayKey.isDown()) || isConfigKeyDown(client, cfg.facingAwayKey);
+            boolean into = isKeyMappingPhysicallyDown(faceIntoKey) || isConfigKeyDown(client, cfg.facingIntoKey);
+            boolean away = isKeyMappingPhysicallyDown(faceAwayKey) || isConfigKeyDown(client, cfg.facingAwayKey);
             placeFacingMode = into ? 1 : (away ? 2 : 0);
         } else {
             placeFacingMode = 0;
         }
 
         if (client.player != null && client.level != null) {
-            int hurt = client.player.hurtTime;
-            if (hurt > prevHurtTime && hurt > 0) lastDamageRevealUntilMs = System.currentTimeMillis() + 5000L;
-            prevHurtTime = hurt;
+            for (Player p : client.level.players()) {
+                int hurt = p.hurtTime;
+                int prev = PREV_HURT_TIME.getOrDefault(p.getUUID(), 0);
+                if (hurt > prev && hurt > 0) {
+                    DAMAGE_REVEAL_UNTIL.put(p.getUUID(), System.currentTimeMillis() + 5000L);
+                }
+                PREV_HURT_TIME.put(p.getUUID(), hurt);
+            }
 
             int curLight = cfg.dynamicLights ? getHeldLightLevel(client.player) : 0;
             BlockPos curPos = client.player.blockPosition();
@@ -278,50 +286,4 @@ public final class AunClientFeatures {
                 || p.equals("jack_o_lantern") || p.equals("lava_bucket") || p.equals("campfire")
                 || p.equals("beacon") || p.contains("froglight")) return 15;
         if (p.equals("glow_berries") || p.equals("glow_ink_sac") || p.equals("blaze_rod")) return 10;
-        if (p.equals("magma_block") || p.equals("crying_obsidian") || p.equals("amethyst_cluster")) return 6;
-        return 0;
-    }
-
-    public static int computeDynamicLightAt(BlockPos pos) {
-        if (!AunConfigManager.get().dynamicLights || pos == null) return 0;
-        Minecraft client = Minecraft.getInstance();
-        if (client == null || client.level == null || client.player == null) return 0;
-        int best = 0;
-        for (Player player : client.level.players()) {
-            int held = getHeldLightLevel(player);
-            if (held <= 0) continue;
-            double dx = (pos.getX() + 0.5D) - player.getX();
-            double dy = (pos.getY() + 0.5D) - player.getEyeY();
-            double dz = (pos.getZ() + 0.5D) - player.getZ();
-            int level = (int) Math.round(held - Math.sqrt(dx * dx + dy * dy + dz * dz) * 1.25D);
-            if (level > best) best = level;
-        }
-        return Math.max(0, Math.min(15, best));
-    }
-
-    public static boolean isArmorVisualHidden() { return armorVisualHidden; }
-    public static void toggleArmorVisualHidden() { armorVisualHidden = !armorVisualHidden; }
-
-    public static boolean shouldHideLocalPlayerArmorNow() {
-        return AunConfigManager.get().hideArmor && armorVisualHidden && System.currentTimeMillis() >= lastDamageRevealUntilMs;
-    }
-
-    public static boolean isZooming() {
-        Minecraft client = Minecraft.getInstance();
-        if (!AunConfigManager.get().zoom || client == null || currentScreen != null) return false;
-        return (zoomKey != null && zoomKey.isDown()) || isConfigKeyDown(client, AunConfigManager.get().zoomKey);
-    }
-
-    public static boolean shouldHideHudOnly() { return AunConfigManager.get().betterF1 && f1State == 1; }
-    public static int getPlaceFacingMode() { return placeFacingMode; }
-
-    public static boolean shouldCancelOwnEffectParticle() {
-        if (!inLocalPlayerTickEffects) return false;
-        Minecraft client = Minecraft.getInstance();
-        if (client == null || client.options == null) return false;
-        AunConfig cfg = AunConfigManager.get();
-        cfg.syncMirrors();
-        return client.options.getCameraType().isFirstPerson() ? cfg.hideOwnParticlesFirstPerson : cfg.hideOwnParticlesThirdPerson;
-    }
-}
-// END OF FILE
+        if (p.equals("magma_block") || p.equals("crying_obsidian") || p.equals("amethyst_cluster"))
