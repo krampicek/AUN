@@ -9,7 +9,11 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.NarratorStatus;
 import net.minecraft.client.Options;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -17,7 +21,8 @@ import java.lang.reflect.Method;
 /**
  * Client-side keybinds and state for Zoom (BG), Better F1 (AC),
  * Disable Narrator (J), Disable Advancements Keybind (K), Facing Placement (A),
- * Borderless Fullscreen (AU), and Hide Own Particles (AE).
+ * Borderless Fullscreen (AU), Hide Own Particles (AE), Hide Armor (BB),
+ * Dynamic Lights (AD), and Raised Hotbar (AI).
  */
 public final class AunClientFeatures {
 
@@ -36,6 +41,18 @@ public final class AunClientFeatures {
 
     /** True while LocalPlayer is ticking its own status effect particles. */
     public static boolean inLocalPlayerTickEffects = false;
+
+    /** True while Gui.extractRenderState is drawing the HUD. */
+    public static boolean inGuiHudRender = false;
+
+    /** BB: Hide armor visual toggle controlled by the eye icon in InventoryScreen. */
+    private static boolean armorVisualHidden = false;
+    private static long lastDamageRevealUntilMs = 0L;
+    private static int prevHurtTime = 0;
+
+    /** AD: Dynamic lights tracking. */
+    private static BlockPos lastLightBlockPos = null;
+    private static int lastHeldLightLevel = 0;
 
     private AunClientFeatures() {}
 
@@ -156,6 +173,120 @@ public final class AunClientFeatures {
         } else {
             placeFacingMode = 0;
         }
+
+        if (client.player != null && client.level != null) {
+            // BB: Reveal armor for 5 seconds when taking damage
+            int hurt = client.player.hurtTime;
+            if (hurt > prevHurtTime && hurt > 0) {
+                lastDamageRevealUntilMs = System.currentTimeMillis() + 5000L;
+            }
+            prevHurtTime = hurt;
+
+            // AD: Dynamic lights chunk refresh when player moves or switches light items
+            int currentLight = cfg.dynamicLights ? getHeldLightLevel(client.player) : 0;
+            BlockPos currentPos = client.player.blockPosition();
+            if (currentLight != lastHeldLightLevel
+                    || (currentLight > 0 && !currentPos.equals(lastLightBlockPos))) {
+                if (lastLightBlockPos != null) {
+                    markLightAreaDirty(client, lastLightBlockPos);
+                }
+                markLightAreaDirty(client, currentPos);
+                lastLightBlockPos = currentPos.immutable();
+                lastHeldLightLevel = currentLight;
+            }
+        }
+    }
+
+    private static void markLightAreaDirty(Minecraft client, BlockPos center) {
+        if (client.levelRenderer == null) {
+            return;
+        }
+        client.levelRenderer.setBlocksDirty(
+                center.getX() - 12, center.getY() - 12, center.getZ() - 12,
+                center.getX() + 12, center.getY() + 12, center.getZ() + 12);
+    }
+
+    public static int getHeldLightLevel(Player player) {
+        if (player == null) {
+            return 0;
+        }
+        return Math.max(getStackLightLevel(player.getMainHandItem()), getStackLightLevel(player.getOffhandItem()));
+    }
+
+    private static int getStackLightLevel(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return 0;
+        }
+        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+        // Soul items give a smaller light level (10)
+        if (path.equals("soul_torch") || path.equals("soul_lantern") || path.equals("soul_campfire")) {
+            return 10;
+        }
+        if (path.equals("redstone_torch")) {
+            return 7;
+        }
+        if (path.equals("torch") || path.equals("end_rod")) {
+            return 14;
+        }
+        if (path.equals("lantern")
+                || path.equals("glowstone")
+                || path.equals("sea_lantern")
+                || path.equals("shroomlight")
+                || path.equals("jack_o_lantern")
+                || path.equals("lava_bucket")
+                || path.equals("campfire")
+                || path.equals("beacon")
+                || path.contains("froglight")) {
+            return 15;
+        }
+        if (path.equals("glow_berries") || path.equals("glow_ink_sac") || path.equals("blaze_rod")) {
+            return 10;
+        }
+        if (path.equals("magma_block") || path.equals("crying_obsidian") || path.equals("amethyst_cluster")) {
+            return 6;
+        }
+        return 0;
+    }
+
+    public static int computeDynamicLightAt(BlockPos pos) {
+        if (!AunConfigManager.get().dynamicLights || pos == null) {
+            return 0;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.level == null || client.player == null) {
+            return 0;
+        }
+        int best = 0;
+        for (Player player : client.level.players()) {
+            int held = getHeldLightLevel(player);
+            if (held <= 0) {
+                continue;
+            }
+            double dx = (pos.getX() + 0.5D) - player.getX();
+            double dy = (pos.getY() + 0.5D) - player.getEyeY();
+            double dz = (pos.getZ() + 0.5D) - player.getZ();
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            int level = (int) Math.round(held - dist * 1.25D);
+            if (level > best) {
+                best = level;
+            }
+        }
+        return Math.max(0, Math.min(15, best));
+    }
+
+    public static boolean isArmorVisualHidden() {
+        return armorVisualHidden;
+    }
+
+    public static void toggleArmorVisualHidden() {
+        armorVisualHidden = !armorVisualHidden;
+    }
+
+    public static boolean shouldHideLocalPlayerArmorNow() {
+        if (!AunConfigManager.get().hideArmor || !armorVisualHidden) {
+            return false;
+        }
+        return System.currentTimeMillis() >= lastDamageRevealUntilMs;
     }
 
     public static boolean isZooming() {
