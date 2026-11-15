@@ -1,109 +1,65 @@
 package dev.example.aun.mixin;
 
-import dev.example.aun.Aun;
+import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.goal.GoalSelector;
-import net.minecraft.world.entity.ai.goal.WrappedGoal;
-import org.spongepowered.asm.mixin.Final;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Per-mob tweaks, checked a few times per second on the server:
- *   Feature 1: Endermen lose their "take block" / "leave block" goals while the toggle is ON
- *              (restored when it is switched OFF).
- *   Feature D: Happy Ghasts with the Speed effect get a flying-speed bonus, like a player
- *              gets a walking-speed bonus; strength set by the percentage in the menu (100 = default).
- */
 @Mixin(Mob.class)
-public abstract class MobMixin {
+public abstract class MobMixin extends LivingEntity {
 
-    @Shadow @Final protected GoalSelector goalSelector;
+    protected MobMixin(EntityType<? extends LivingEntity> type, Level level) {
+        super(type, level);
+    }
 
-    /** Removed Enderman goals as {priority, goal}, kept so they can be restored. */
-    @Unique private List<Object[]> aun$stash;
-
-    @Inject(method = "tick", at = @At("HEAD"), require = 0)
-    private void aun$mobTweaks(CallbackInfo ci) {
+    @Inject(method = "tick", at = @At("TAIL"), require = 0)
+    private void aun$onMobTick(CallbackInfo ci) {
         Mob self = (Mob) (Object) this;
-        if (self.level().isClientSide() || self.tickCount % 5 != 0) {
+        AunConfig cfg = AunConfigManager.get();
+        String path = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType()).getPath();
+
+        if (cfg.noBatSpawning && path.equals("bat") && !self.hasCustomName()) {
+            self.discard();
             return;
         }
-        String type = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType()).getPath();
-        if (type.equals("enderman")) {
-            this.aun$endermanGoals();
-        } else if (type.equals("happy_ghast")) {
-            this.aun$happyGhastSpeed(self);
+
+        if (cfg.mobGriefing.antiEndermanPickup && path.equals("enderman")) {
+            try {
+                var setCarried = self.getClass().getMethod("setCarriedBlock", net.minecraft.world.level.block.state.BlockState.class);
+                setCarried.invoke(self, new Object[]{null});
+            } catch (ReflectiveOperationException ignored) {}
+        }
+
+        if (cfg.speedHappyGhast && path.equals("happy_ghast")) {
+            MobEffectInstance speedEffect = self.getEffect(MobEffects.MOVEMENT_SPEED);
+            if (speedEffect != null || self.isVehicle()) {
+                int amp = speedEffect != null ? speedEffect.getAmplifier() + 1 : 1;
+                double hBoost = aun$parsePercent(cfg.happyGhastHorizontalBoost) / 100.0D;
+                double vBoost = aun$parsePercent(cfg.happyGhastVerticalBoost) / 100.0D;
+                Vec3 v = self.getDeltaMovement();
+                double hMult = 1.0D + (0.08D * amp * hBoost);
+                double vMult = 1.0D + (0.08D * amp * vBoost);
+                self.setDeltaMovement(new Vec3(v.x * hMult, v.y * vMult, v.z * hMult));
+            }
         }
     }
 
     @Unique
-    private void aun$endermanGoals() {
-        if (AunConfigManager.get().mobGriefing.antiEndermanPickup) {
-            for (WrappedGoal wrapped : new ArrayList<>(this.goalSelector.getAvailableGoals())) {
-                Goal goal = wrapped.getGoal();
-                String name = goal.getClass().getSimpleName();
-                if (name.equals("EndermanTakeBlockGoal") || name.equals("EndermanLeaveBlockGoal")) {
-                    if (this.aun$stash == null) {
-                        this.aun$stash = new ArrayList<>();
-                    }
-                    this.aun$stash.add(new Object[] {wrapped.getPriority(), goal});
-                    this.goalSelector.removeGoal(goal);
-                }
-            }
-        } else if (this.aun$stash != null && !this.aun$stash.isEmpty()) {
-            for (Object[] entry : this.aun$stash) {
-                this.goalSelector.addGoal((Integer) entry[0], (Goal) entry[1]);
-            }
-            this.aun$stash.clear();
-        }
-    }
-
-    @Unique
-    private void aun$happyGhastSpeed(Mob ghast) {
-        AttributeInstance flying = ghast.getAttribute(Attributes.FLYING_SPEED);
-        if (flying == null) {
-            return;
-        }
-        MobEffectInstance speed = ghast.getEffect(MobEffects.SPEED);
-        AttributeModifier current = flying.getModifier(Aun.GHAST_SPEED_ID);
-
-        if (AunConfigManager.get().speedHappyGhast && speed != null) {
-            double defaultBonus = (1.0 + 0.2 * (speed.getAmplifier() + 1)) * 1.5 - 1.0;
-            int percent = aun$parsePercent(AunConfigManager.get().happyGhastBoost);
-            double amount = defaultBonus * percent / 100.0;
-            if (current == null || current.amount() != amount) {
-                flying.addOrUpdateTransientModifier(new AttributeModifier(
-                    Aun.GHAST_SPEED_ID, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
-            }
-        } else if (current != null) {
-            flying.removeModifier(Aun.GHAST_SPEED_ID);
-        }
-    }
-
-    /** Reads the text typed in the menu ("150", "150%", " 150 "). Bad input falls back to 100. */
-    @Unique
-    private static int aun$parsePercent(String text) {
-        try {
-            int value = Integer.parseInt(text.trim().replace("%", "").trim());
-            return Math.max(0, Math.min(1000, value));
-        } catch (RuntimeException e) {
-            return 100;
-        }
+    private static double aun$parsePercent(String val) {
+        if (val == null || val.isBlank()) return 100.0D;
+        try { return Math.max(0.0D, Math.min(500.0D, Double.parseDouble(val.trim()))); }
+        catch (NumberFormatException e) { return 100.0D; }
     }
 }
+// END OF FILE
