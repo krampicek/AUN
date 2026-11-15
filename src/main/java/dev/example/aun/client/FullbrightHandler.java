@@ -11,15 +11,12 @@ import net.minecraft.world.effect.MobEffects;
 
 import java.lang.reflect.Method;
 
-/**
- * Fullbright: applies full brightness inside LightTextureMixin so the Nether sky and fog
- * never turn neon red. Can be toggled in-game with the configured key (default H).
- */
 public final class FullbrightHandler {
 
     private static KeyMapping toggleKey;
     private static boolean enabled = true;
     private static boolean wasCustomKeyDown = false;
+    private static boolean lastActiveState = false;
 
     private FullbrightHandler() {}
 
@@ -44,34 +41,46 @@ public final class FullbrightHandler {
             } catch (ReflectiveOperationException ignored) {
             }
         }
-        Aun.LOGGER.warn("Could not register the fullbright key");
     }
 
     private static void tick(Minecraft client) {
-        if (client.player == null) {
+        if (client.player == null || client.level == null) {
             return;
         }
         boolean allowed = AunConfigManager.get().fullbright;
+
         while (toggleKey.consumeClick()) {
             if (allowed) {
                 enabled = !enabled;
             }
         }
-        boolean customDown = client.screen == null
-                && AunClientFeatures.isConfiguredBindingDown(client, AunConfigManager.get().fullbrightKeybind);
-        if (customDown && !wasCustomKeyDown && allowed && toggleKey.isDefault()) {
-            enabled = !enabled;
+
+        if (AunClientFeatures.currentScreen == null) {
+            boolean customDown = AunClientFeatures.isConfigKeyDown(client, AunConfigManager.get().fullbrightKey);
+            if (customDown && !wasCustomKeyDown && allowed) {
+                enabled = !enabled;
+            }
+            wasCustomKeyDown = customDown;
+        } else {
+            wasCustomKeyDown = false;
         }
-        wasCustomKeyDown = customDown;
 
         if (!allowed) {
             enabled = true;
         }
-        // Clean up any leftover Night Vision effect from older versions
-        if (client.player.hasEffect(MobEffects.NIGHT_VISION)
-                && client.player.getEffect(MobEffects.NIGHT_VISION) != null
-                && client.player.getEffect(MobEffects.NIGHT_VISION).isInfiniteDuration()) {
+
+        var nv = client.player.getEffect(MobEffects.NIGHT_VISION);
+        if (nv != null && nv.isInfiniteDuration() && !nv.isVisible()) {
             client.player.removeEffect(MobEffects.NIGHT_VISION);
+        }
+
+        boolean activeNow = isFullbrightActive();
+        if (activeNow != lastActiveState) {
+            lastActiveState = activeNow;
+            AunClientFeatures.refreshPlayerLightArea(client);
+            if (client.levelRenderer != null) {
+                client.levelRenderer.allChanged();
+            }
         }
     }
 
