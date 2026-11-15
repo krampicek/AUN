@@ -7,21 +7,19 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 
 import java.lang.reflect.Method;
 
 /**
- * Fullbright: press H (changeable in the controls menu, category "A-U-N") to switch full
- * brightness on and off. It works by giving your own client a hidden, endless night vision
- * effect - the server never knows about it.
+ * Fullbright: applies full brightness inside LightTextureMixin so the Nether sky and fog
+ * never turn neon red. Can be toggled in-game with the configured key (default H).
  */
 public final class FullbrightHandler {
 
     private static KeyMapping toggleKey;
-    private static boolean enabled;
-    private static boolean ours; // true while the night vision effect on the player is ours
+    private static boolean enabled = true;
+    private static boolean wasCustomKeyDown = false;
 
     private FullbrightHandler() {}
 
@@ -32,7 +30,6 @@ public final class FullbrightHandler {
         ClientTickEvents.END_CLIENT_TICK.register(FullbrightHandler::tick);
     }
 
-    /** Fabric renamed its key helper between versions, so try the known names. */
     private static void registerKeyMapping(KeyMapping key) {
         String[][] candidates = {
             {"net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper", "registerKeyMapping"},
@@ -45,7 +42,6 @@ public final class FullbrightHandler {
                 method.invoke(null, key);
                 return;
             } catch (ReflectiveOperationException ignored) {
-                // try the next one
             }
         }
         Aun.LOGGER.warn("Could not register the fullbright key");
@@ -53,7 +49,6 @@ public final class FullbrightHandler {
 
     private static void tick(Minecraft client) {
         if (client.player == null) {
-            ours = false;
             return;
         }
         boolean allowed = AunConfigManager.get().fullbright;
@@ -62,17 +57,25 @@ public final class FullbrightHandler {
                 enabled = !enabled;
             }
         }
-        if (enabled && allowed) {
-            if (!client.player.hasEffect(MobEffects.NIGHT_VISION)) {
-                client.player.addEffect(new MobEffectInstance(
-                    MobEffects.NIGHT_VISION, MobEffectInstance.INFINITE_DURATION, 0, false, false, false));
-                ours = true;
-            }
-        } else {
-            if (ours) {
-                client.player.removeEffect(MobEffects.NIGHT_VISION);
-                ours = false;
-            }
+        boolean customDown = client.screen == null
+                && AunClientFeatures.isConfiguredBindingDown(client, AunConfigManager.get().fullbrightKeybind);
+        if (customDown && !wasCustomKeyDown && allowed && toggleKey.isDefault()) {
+            enabled = !enabled;
         }
+        wasCustomKeyDown = customDown;
+
+        if (!allowed) {
+            enabled = true;
+        }
+        // Clean up any leftover Night Vision effect from older versions
+        if (client.player.hasEffect(MobEffects.NIGHT_VISION)
+                && client.player.getEffect(MobEffects.NIGHT_VISION) != null
+                && client.player.getEffect(MobEffects.NIGHT_VISION).isInfiniteDuration()) {
+            client.player.removeEffect(MobEffects.NIGHT_VISION);
+        }
+    }
+
+    public static boolean isFullbrightActive() {
+        return AunConfigManager.get().fullbright && enabled;
     }
 }
