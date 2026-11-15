@@ -69,7 +69,7 @@ public abstract class AbstractContainerMenuMixin {
                     && ItemStack.isSameItemSameComponents(slot.getItem(), template)) {
                 ItemStack removed = slot.safeTake(slot.getItem().getCount(), Integer.MAX_VALUE, player);
                 if (!removed.isEmpty()) {
-                    player.drop(removed, true);
+                    player.drop(removed, false, true);
                 }
             }
         }
