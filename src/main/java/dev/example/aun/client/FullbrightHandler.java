@@ -1,79 +1,45 @@
-package dev.example.aun.client;
+package dev.example.aun.mixin;
 
-import com.mojang.blaze3d.platform.InputConstants;
-import dev.example.aun.Aun;
+import dev.example.aun.client.AunClientFeatures;
+import dev.example.aun.client.FullbrightHandler;
 import dev.example.aun.config.AunConfigManager;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.effect.MobEffects;
+import net.minecraft.client.NarratorStatus;
+import net.minecraft.client.OptionInstance;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.lang.reflect.Method;
+@Mixin(OptionInstance.class)
+public abstract class GameRendererMixin {
 
-public final class FullbrightHandler {
-
-    private static KeyMapping toggleKey;
-    private static boolean enabled = true;
-    private static boolean wasCustomKeyDown = false;
-    private static boolean lastActiveState = false;
-
-    private FullbrightHandler() {}
-
-    public static void register() {
-        KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Aun.MOD_ID, "main"));
-        toggleKey = new KeyMapping("key.aun.fullbright", InputConstants.KEY_H, category);
-        registerKeyMapping(toggleKey);
-        ClientTickEvents.END_CLIENT_TICK.register(FullbrightHandler::tick);
-    }
-
-    private static void registerKeyMapping(KeyMapping key) {
-        String[][] candidates = {
-            {"net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper", "registerKeyMapping"},
-            {"net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper", "registerKeyBinding"},
-            {"net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper", "registerKeyBinding"}
-        };
-        for (String[] candidate : candidates) {
-            try {
-                Method method = Class.forName(candidate[0]).getMethod(candidate[1], KeyMapping.class);
-                method.invoke(null, key);
-                return;
-            } catch (ReflectiveOperationException ignored) {}
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Inject(method = "get", at = @At("RETURN"), cancellable = true, require = 0)
+    private void aun$overrideGammaAndFov(CallbackInfoReturnable cir) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.options == null) return;
+        Object self = this;
+        if (self == mc.options.gamma() && FullbrightHandler.isFullbrightActive()) {
+            cir.setReturnValue(16.0D);
+        } else if (self == mc.options.fov() && AunClientFeatures.isZooming()) {
+            Object val = cir.getReturnValue();
+            if (val instanceof Integer fov) {
+                cir.setReturnValue(Math.max(15, fov / 4));
+            }
         }
     }
 
-    private static void tick(Minecraft client) {
-        if (client.player == null || client.level == null) return;
-        boolean allowed = AunConfigManager.get().fullbright;
-
-        while (toggleKey.consumeClick()) {
-            if (allowed) enabled = !enabled;
+    @Inject(method = "set", at = @At("HEAD"), cancellable = true, require = 0)
+    private void aun$lockNarratorOff(Object value, CallbackInfo ci) {
+        if (!AunConfigManager.get().hud.disableNarrator) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.options != null && (Object) this == mc.options.narrator()) {
+            if (value != NarratorStatus.OFF || mc.options.narrator().get() == NarratorStatus.OFF) {
+                ci.cancel();
+            }
         }
-
-        if (AunClientFeatures.currentScreen == null) {
-            boolean customDown = AunClientFeatures.isConfigKeyDown(client, AunConfigManager.get().fullbrightKey);
-            if (customDown && !wasCustomKeyDown && allowed) enabled = !enabled;
-            wasCustomKeyDown = customDown;
-        } else {
-            wasCustomKeyDown = false;
-        }
-
-        if (!allowed) enabled = true;
-
-        var nv = client.player.getEffect(MobEffects.NIGHT_VISION);
-        if (nv != null && nv.isInfiniteDuration() && !nv.isVisible()) {
-            client.player.removeEffect(MobEffects.NIGHT_VISION);
-        }
-
-        boolean activeNow = isFullbrightActive();
-        if (activeNow != lastActiveState) {
-            lastActiveState = activeNow;
-            AunClientFeatures.refreshPlayerLightArea(client);
-        }
-    }
-
-    public static boolean isFullbrightActive() {
-        return AunConfigManager.get().fullbright && enabled;
     }
 }
 // END OF FILE
