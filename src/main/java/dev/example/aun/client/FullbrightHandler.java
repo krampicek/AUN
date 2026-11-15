@@ -27,7 +27,7 @@ public final class FullbrightHandler {
 
     public static void register() {
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Aun.MOD_ID, "main"));
-        toggleKey = new KeyMapping("key.aun.fullbright", InputConstants.Type.KEYBOARD, InputConstants.KEY_H, category);
+        toggleKey = new KeyMapping("key.aun.fullbright", InputConstants.KEY_H, category);
         registerKeyMapping(toggleKey);
         ClientTickEvents.END_CLIENT_TICK.register(FullbrightHandler::tick);
     }
