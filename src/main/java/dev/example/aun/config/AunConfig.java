@@ -60,6 +60,13 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fadelessLoading = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastQuit = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastLanguageReload = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean chestSearchBar = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean favouriteWorlds = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean worldPlaytimeDisplay = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean chatHeads = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean chatTextCopy = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean recipeBookOrigin = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean headLocator = true;
 
     @ConfigEntry.Category("qol")
     @ConfigEntry.Gui.CollapsibleObject
