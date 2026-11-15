@@ -1,8 +1,6 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.config.AunConfigManager;
-import net.minecraft.client.KeyboardHandler;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -25,16 +23,12 @@ public abstract class KeyboardHandlerMixin {
             MouseButtonEvent event,
             boolean doubleClick,
             CallbackInfoReturnable<Boolean> cir) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.screen != null) {
-            try {
-                var m = mc.screen.getClass().getMethod("aun$handleSubScreenMouseClick", MouseButtonEvent.class);
-                if (Boolean.TRUE.equals(m.invoke(mc.screen, event))) {
-                    cir.setReturnValue(true);
-                }
-            } catch (ReflectiveOperationException ignored) {
+        try {
+            var m = this.getClass().getMethod("aun$handleSubScreenMouseClick", MouseButtonEvent.class);
+            if (Boolean.TRUE.equals(m.invoke(this, event))) {
+                cir.setReturnValue(true);
             }
-        }
+        } catch (ReflectiveOperationException ignored) {}
     }
 
     @Inject(
@@ -46,20 +40,16 @@ public abstract class KeyboardHandlerMixin {
     private void aun$onSubScreenKeyPressed(
             KeyEvent event,
             CallbackInfoReturnable<Boolean> cir) {
-        // J: Block Ctrl+B Narrator keybind completely
         if (AunConfigManager.get().disableNarrator && event.key() == 66 && event.hasControlDown()) {
             cir.setReturnValue(true);
             return;
         }
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.screen != null) {
-            try {
-                var m = mc.screen.getClass().getMethod("aun$handleSubScreenKeyPressed", KeyEvent.class);
-                if (Boolean.TRUE.equals(m.invoke(mc.screen, event))) {
-                    cir.setReturnValue(true);
-                }
-            } catch (ReflectiveOperationException ignored) {
+        try {
+            var m = this.getClass().getMethod("aun$handleSubScreenKeyPressed", KeyEvent.class);
+            if (Boolean.TRUE.equals(m.invoke(this, event))) {
+                cir.setReturnValue(true);
             }
-        }
+        } catch (ReflectiveOperationException ignored) {}
     }
 }
+// END OF FILE
