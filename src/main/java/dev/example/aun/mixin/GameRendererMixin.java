@@ -11,8 +11,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
 
-    @Inject(method = "getFov", at = @At("RETURN"), cancellable = true, require = 0)
-    private void aun$applyZoom(
+    @Inject(
+        method = "getFov(Lnet/minecraft/client/Camera;FZ)F",
+        at = @At("RETURN"),
+        cancellable = true,
+        require = 0
+    )
+    private void aun$applyZoomFloat(
             Camera camera,
             float partialTick,
             boolean useFovSetting,
