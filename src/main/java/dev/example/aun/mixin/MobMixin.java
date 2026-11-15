@@ -2,9 +2,9 @@ package dev.example.aun.mixin;
 
 import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfigManager;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -54,7 +54,7 @@ public abstract class MobMixin {
 
     @Unique
     private void aun$endermanGoals() {
-        if (AunConfigManager.get().antiEndermanPickup) {
+        if (AunConfigManager.get().mobGriefing.antiEndermanPickup) {
             for (WrappedGoal wrapped : new ArrayList<>(this.goalSelector.getAvailableGoals())) {
                 Goal goal = wrapped.getGoal();
                 String name = goal.getClass().getSimpleName();
@@ -84,9 +84,6 @@ public abstract class MobMixin {
         AttributeModifier current = flying.getModifier(Aun.GHAST_SPEED_ID);
 
         if (AunConfigManager.get().speedHappyGhast && speed != null) {
-            // Default boost (100%): a player's Speed bonus (+20% per level) made 1.5x stronger,
-            // i.e. Speed I -> x1.8 and Speed II -> x2.1 flying speed.
-            // The menu value scales only the extra speed: 200 = double the extra, 50 = half, 0 = none.
             double defaultBonus = (1.0 + 0.2 * (speed.getAmplifier() + 1)) * 1.5 - 1.0;
             int percent = aun$parsePercent(AunConfigManager.get().happyGhastBoost);
             double amount = defaultBonus * percent / 100.0;
