@@ -42,6 +42,17 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean accurateBlockPlacement = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean ctrlDropAllSameItems = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bundleFix = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean borderlessFullscreen = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noResourcePackWarning = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean deletedWorldProtection = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean clearWater = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean clearLava = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean clearPowderSnow = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesFirstPerson = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesThirdPerson = false;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean moreChatHistory = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean enchantmentDescriptions = true;
 
     // --------------------------- Vanilla+ ----------------------------
     @ConfigEntry.Category("vanillaPlus")
