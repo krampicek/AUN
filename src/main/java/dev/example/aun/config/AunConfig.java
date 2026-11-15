@@ -8,7 +8,6 @@ import me.shedaniel.autoconfig.annotation.ConfigEntry;
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
 
-    // ============================== QOL TAB ==============================
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
     public ClearVisionConfig clearVision = new ClearVisionConfig();
     public static class ClearVisionConfig {
@@ -82,17 +81,13 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
-
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String fullbrightKey = "H";
-
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean zoom = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String zoomKey = "C";
-
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String facingIntoKey = "V";
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String facingAwayKey = "LCONTROL";
-
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean netherCalc = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noAccidentalLogStripping = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean accurateBlockPlacement = true;
@@ -105,7 +100,6 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastLanguageReload = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean chestSearchBar = true;
 
-    // =========================== VANILLA+ TAB ============================
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
     public MobGriefingConfig mobGriefing = new MobGriefingConfig();
     public static class MobGriefingConfig {
@@ -116,4 +110,11 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean antiRavagerGrief = true;
         @ConfigEntry.Gui.Tooltip public boolean safeLightning = true;
         @ConfigEntry.Gui.Tooltip public boolean noZombieDoorBreak = true;
-        @ConfigEntry.Gui.Tooltip public boolean noCropTrampleFeatherFalling =
+        @ConfigEntry.Gui.Tooltip public boolean noCropTrampleFeatherFalling = true;
+        @ConfigEntry.Gui.Tooltip public boolean noCropTrampleMobs = true;
+    }
+
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
+    public InstaMineConfig instaMine = new InstaMineConfig();
+    public static class InstaMineConfig {
+        @ConfigEntry.Gui
