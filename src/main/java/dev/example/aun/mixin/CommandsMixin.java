@@ -30,8 +30,10 @@ public abstract class CommandsMixin {
             Commands.CommandSelection selection,
             CommandBuildContext context,
             CallbackInfo ci) {
-        this.dispatcher.register(Commands.literal("nethercalc").executes(CommandsMixin::aun$executeNetherCalc));
-        this.dispatcher.register(Commands.literal("Nethercalc").executes(CommandsMixin::aun$executeNetherCalc));
+        this.dispatcher.register(
+                Commands.literal("nethercalc")
+                        .requires(source -> AunConfigManager.get().netherCalc)
+                        .executes(CommandsMixin::aun$executeNetherCalc));
     }
 
     @Unique
