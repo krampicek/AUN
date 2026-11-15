@@ -15,11 +15,18 @@
     "FlowingFluidMixin",
     "AnvilMenuMixin",
     "BlockDropMixin",
-    "ServerPlayerMixin"
+    "ServerPlayerMixin",
+    "CommandsMixin",
+    "ExperienceOrbMixin",
+    "MerchantOfferMixin",
+    "BreakDoorGoalMixin",
+    "TemptGoalMixin",
+    "EnchantingTableBlockMixin"
   ],
   "client": [
     "AnvilScreenMixin",
-    "BookViewScreenMixin"
+    "BookViewScreenMixin",
+    "BookEditScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0
