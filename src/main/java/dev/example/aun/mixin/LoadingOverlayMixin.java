@@ -13,7 +13,7 @@ public abstract class LoadingOverlayMixin {
 
     @Shadow private long fadeOutStart;
 
-    @Inject(method = {"extractRenderState", "render", "tick"}, at = @At("HEAD"), require = 0)
+    @Inject(method = "tick()V", at = @At("HEAD"), require = 0)
     private void aun$instantFinishFadeOut(CallbackInfo ci) {
         if (AunConfigManager.get().fadelessLoading && this.fadeOutStart > 1L) {
             this.fadeOutStart = 1L;
