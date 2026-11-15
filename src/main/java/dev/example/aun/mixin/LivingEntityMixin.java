@@ -1,7 +1,9 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import dev.example.aun.gamerule.AunGameRules;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -9,6 +11,10 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -16,21 +22,64 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * LivingEntity features:
- *   - Mace nerf gamerule (player vs player)
- *   - Auto Totem refill on pop (R)
- *   - Firework Rocket Elytra speed fix (I)
- */
+import java.util.Locale;
+
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin extends Entity {
 
+    @Unique private InteractionHand aun$totemHandBeforePop = null;
+
     protected LivingEntityMixin(EntityType<?> type, Level level) {
         super(type, level);
+    }
+
+    @Inject(method = "shouldShowName", at = @At("HEAD"), cancellable = true, require = 0)
+    private void aun$hideEntityNametags(CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        AunConfig.HideNametagsConfig cfg = AunConfigManager.get().hideNametags;
+        if (self instanceof Player) {
+            if (cfg.hidePlayerNametags) {
+                cir.setReturnValue(false);
+            }
+            return;
+        }
+        if (self instanceof Mob) {
+            if (cfg.hideMobNametags) {
+                cir.setReturnValue(false);
+                return;
+            }
+            boolean isTamed = (self instanceof TamableAnimal ta && ta.isTame())
+                    || (self instanceof AbstractHorse horse && horse.isTamed());
+            if (isTamed && cfg.hideTamedMobNametags) {
+                cir.setReturnValue(false);
+                return;
+            }
+            boolean isHostile = self instanceof Enemy;
+            if (isHostile && cfg.hideHostileMobNametags) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (!isHostile && !isTamed && cfg.hidePassiveMobNametags) {
+                cir.setReturnValue(false);
+                return;
+            }
+            String list = cfg.hiddenMobsList;
+            if (list != null && !list.isBlank()) {
+                String mobId = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType()).getPath().toLowerCase(Locale.ROOT);
+                for (String token : list.split(",")) {
+                    String trimmed = token.trim().toLowerCase(Locale.ROOT).replace("minecraft:", "");
+                    if (!trimmed.isEmpty() && trimmed.equals(mobId)) {
+                        cir.setReturnValue(false);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     @Inject(method = "getDamageAfterMagicAbsorb", at = @At("RETURN"), cancellable = true, require = 0)
@@ -45,12 +94,29 @@ public abstract class LivingEntityMixin extends Entity {
         }
     }
 
+    @Inject(method = "checkTotemDeathProtection", at = @At("HEAD"), require = 0)
+    private void aun$recordTotemHandBeforePop(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
+        this.aun$totemHandBeforePop = null;
+        if ((Object) this instanceof Player player) {
+            if (player.getMainHandItem().is(Items.TOTEM_OF_UNDYING)) {
+                this.aun$totemHandBeforePop = InteractionHand.MAIN_HAND;
+            } else if (player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
+                this.aun$totemHandBeforePop = InteractionHand.OFF_HAND;
+            }
+        }
+    }
+
     @Inject(method = "checkTotemDeathProtection", at = @At("RETURN"), require = 0)
     private void aun$autoTotemRefill(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
-        if (!cir.getReturnValue() || !AunConfigManager.get().autoTotem) {
+        InteractionHand targetHand = this.aun$totemHandBeforePop;
+        this.aun$totemHandBeforePop = null;
+        if (!cir.getReturnValue() || !AunConfigManager.get().autoTotem || targetHand == null) {
             return;
         }
         if (!((Object) this instanceof Player player) || player.level().isClientSide()) {
+            return;
+        }
+        if (!player.getItemInHand(targetHand).isEmpty()) {
             return;
         }
         Inventory inv = player.getInventory();
@@ -58,11 +124,7 @@ public abstract class LivingEntityMixin extends Entity {
             ItemStack stack = inv.getItem(i);
             if (stack.is(Items.TOTEM_OF_UNDYING)) {
                 ItemStack replacement = stack.split(1);
-                if (player.getOffhandItem().isEmpty()) {
-                    player.setItemInHand(InteractionHand.OFF_HAND, replacement);
-                } else if (player.getMainHandItem().isEmpty()) {
-                    player.setItemInHand(InteractionHand.MAIN_HAND, replacement);
-                }
+                player.setItemInHand(targetHand, replacement);
                 break;
             }
         }
@@ -79,9 +141,9 @@ public abstract class LivingEntityMixin extends Entity {
             double dx = newDelta.x - ex;
             double dy = newDelta.y - ey;
             double dz = newDelta.z - ez;
+            // If called by FireworkRocketEntity and newDelta would slow the player down, preserve current speed without adding extra speed
             if (dx * dx + dy * dy + dz * dz < 1.0E-6D && newDelta.lengthSqr() < delta.lengthSqr()) {
-                double boostedSpeed = delta.length() + 0.05D;
-                newDelta = look.normalize().scale(boostedSpeed);
+                newDelta = look.normalize().scale(delta.length());
             }
         }
         super.setDeltaMovement(newDelta);
