@@ -31,9 +31,24 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean netherCalc = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean stackRefill = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoTotem = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoClimbLadders = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noAccidentalLogStripping = true;
 
     // --------------------------- Vanilla+ ----------------------------
-    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean antiEndermanPickup = true;
+    @ConfigEntry.Category("vanillaPlus")
+    @ConfigEntry.Gui.CollapsibleObject
+    public MobGriefingConfig mobGriefing = new MobGriefingConfig();
+
+    public static class MobGriefingConfig {
+        @ConfigEntry.Gui.Tooltip public boolean antiEndermanPickup = true;
+        @ConfigEntry.Gui.Tooltip public boolean antiCreeperGrief = true;
+        @ConfigEntry.Gui.Tooltip public boolean antiGhastGrief = true;
+        @ConfigEntry.Gui.Tooltip public boolean antiBlazeGrief = true;
+        @ConfigEntry.Gui.Tooltip public boolean antiRavagerGrief = true;
+    }
+
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean hideBeaconBeamBehindTintedGlass = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean safeLightning = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean instaMineGlass = true;
@@ -48,10 +63,14 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean infiniteVillagerTrading = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noZombieDoorBreak = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noCropTrampleFeatherFalling = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noCropTrampleMobs = true;
 
     // ------------------------------ Fixes ----------------------------
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean piglinPortalFix = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean safeRedstone = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean enderPearlFix = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean noAnimalTemptDelay = true;
+    @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean rocketElytraFix = true;
+    @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean stackedMinecartFix = true;
 }
