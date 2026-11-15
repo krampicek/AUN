@@ -95,10 +95,13 @@ public class AunConfig implements ConfigData {
     public static class HideNametagsConfig {
         @ConfigEntry.Gui.Tooltip public boolean hidePlayerNametags = false;
         @ConfigEntry.Gui.Tooltip public boolean hideMobNametags = false;
+        @ConfigEntry.Gui.Tooltip public boolean hideHostileMobNametags = false;
+        @ConfigEntry.Gui.Tooltip public boolean hidePassiveMobNametags = false;
+        @ConfigEntry.Gui.Tooltip public boolean hideTamedMobNametags = false;
         @ConfigEntry.Gui.Tooltip public String hiddenMobsList = "";
     }
 
-    // Other QOL Toggles
+    // Other QOL Toggles + Keybind Boxes Next To Yes/No Options
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean cutThrough = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean doubleDoors = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean simpleHarvest = true;
@@ -106,11 +109,19 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
+
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String fullbrightKeybind = "H";
+
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean zoom = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String zoomKeybind = "C";
+
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String faceIntoKeybind = "MOUSE4";
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String faceAwayKeybind = "LCTRL";
+
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean netherCalc = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noAccidentalLogStripping = true;
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean zoom = true;
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean accurateBlockPlacement = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean borderlessFullscreen = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noResourcePackWarning = true;
