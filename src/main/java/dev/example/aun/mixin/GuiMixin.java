@@ -2,6 +2,7 @@ package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.config.AunConfigManager;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,8 +15,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public abstract class GuiMixin {
 
-    @Inject(method = {"render", "extractRenderState"}, at = @At("HEAD"), cancellable = true, require = 0)
-    private void aun$onHudRenderStart(CallbackInfo ci) {
+    @Inject(
+        method = "render(Lnet/minecraft/client/DeltaTracker;ZZ)V",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
+    private void aun$onHudRenderStart(DeltaTracker deltaTracker, boolean b1, boolean b2, CallbackInfo ci) {
         if (AunClientFeatures.shouldHideHudOnly()) {
             ci.cancel();
             return;
@@ -23,8 +29,12 @@ public abstract class GuiMixin {
         AunClientFeatures.inGuiHudRender = true;
     }
 
-    @Inject(method = {"render", "extractRenderState"}, at = @At("RETURN"), require = 0)
-    private void aun$onHudRenderEnd(CallbackInfo ci) {
+    @Inject(
+        method = "render(Lnet/minecraft/client/DeltaTracker;ZZ)V",
+        at = @At("RETURN"),
+        require = 0
+    )
+    private void aun$onHudRenderEnd(DeltaTracker deltaTracker, boolean b1, boolean b2, CallbackInfo ci) {
         AunClientFeatures.inGuiHudRender = false;
     }
 
