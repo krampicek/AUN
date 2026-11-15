@@ -12,7 +12,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Inventory;
@@ -51,8 +50,7 @@ public abstract class LivingEntityMixin extends Entity {
                 cir.setReturnValue(false);
                 return;
             }
-            boolean isTamed = (self instanceof TamableAnimal ta && ta.isTame())
-                    || (self instanceof OwnableEntity ownable && ownable.getOwnerUUID() != null);
+            boolean isTamed = aun$isTamedMob(self);
             if (isTamed && cfg.hideTamedMobNametags) {
                 cir.setReturnValue(false);
                 return;
@@ -78,6 +76,18 @@ public abstract class LivingEntityMixin extends Entity {
                 }
             }
         }
+    }
+
+    @Unique
+    private static boolean aun$isTamedMob(LivingEntity entity) {
+        if (entity instanceof TamableAnimal ta) {
+            return ta.isTame();
+        }
+        try {
+            Object res = entity.getClass().getMethod("isTamed").invoke(entity);
+            if (res instanceof Boolean b) return b;
+        } catch (ReflectiveOperationException ignored) {}
+        return false;
     }
 
     @Inject(method = "getDamageAfterMagicAbsorb", at = @At("RETURN"), cancellable = true, require = 0)
@@ -130,11 +140,4 @@ public abstract class LivingEntityMixin extends Entity {
             double ey = delta.y + look.y * 0.1D + (look.y * 1.5D - delta.y) * 0.5D;
             double ez = delta.z + look.z * 0.1D + (look.z * 1.5D - delta.z) * 0.5D;
             double dx = newDelta.x - ex, dy = newDelta.y - ey, dz = newDelta.z - ez;
-            if (dx * dx + dy * dy + dz * dz < 1.0E-6D && newDelta.lengthSqr() < delta.lengthSqr()) {
-                newDelta = look.normalize().scale(delta.length());
-            }
-        }
-        super.setDeltaMovement(newDelta);
-    }
-}
-// END OF FILE
+            if (
