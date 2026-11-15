@@ -42,7 +42,7 @@ public abstract class MobMixin extends LivingEntity {
         }
 
         if (cfg.speedHappyGhast && path.equals("happy_ghast")) {
-            MobEffectInstance speedEffect = self.getEffect(MobEffects.MOVEMENT_SPEED);
+            MobEffectInstance speedEffect = self.getEffect(MobEffects.SPEED);
             if (speedEffect != null || self.isVehicle()) {
                 int amp = speedEffect != null ? speedEffect.getAmplifier() + 1 : 1;
                 double hBoost = aun$parsePercent(cfg.happyGhastHorizontalBoost) / 100.0D;
