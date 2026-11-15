@@ -20,7 +20,10 @@ public abstract class AbstractContainerMenuMixin {
 
     @Shadow @Final public NonNullList<Slot> slots;
 
+    @Shadow public abstract void doClick(int slotId, int button, ContainerInput input, Player player);
+
     @Unique private ItemStack aun$ctrlThrowTemplate = ItemStack.EMPTY;
+    @Unique private boolean aun$isDroppingAll = false;
 
     @Inject(method = "doClick", at = @At("HEAD"), require = 0)
     private void aun$captureCtrlThrowTarget(
@@ -29,6 +32,9 @@ public abstract class AbstractContainerMenuMixin {
             ContainerInput input,
             Player player,
             CallbackInfo ci) {
+        if (this.aun$isDroppingAll) {
+            return;
+        }
         this.aun$ctrlThrowTemplate = ItemStack.EMPTY;
         if (AunConfigManager.get().ctrlDropAllSameItems
                 && input == ContainerInput.THROW
@@ -49,29 +55,35 @@ public abstract class AbstractContainerMenuMixin {
             ContainerInput input,
             Player player,
             CallbackInfo ci) {
-        if (this.aun$ctrlThrowTemplate.isEmpty()
+        if (this.aun$isDroppingAll
+                || this.aun$ctrlThrowTemplate.isEmpty()
                 || !AunConfigManager.get().ctrlDropAllSameItems
                 || input != ContainerInput.THROW
                 || button != 1
                 || slotId < 0
                 || slotId >= this.slots.size()) {
-            this.aun$ctrlThrowTemplate = ItemStack.EMPTY;
             return;
         }
         Slot originSlot = this.slots.get(slotId);
         ItemStack template = this.aun$ctrlThrowTemplate;
         this.aun$ctrlThrowTemplate = ItemStack.EMPTY;
 
-        for (Slot slot : this.slots) {
-            if (slot.container == originSlot.container
-                    && slot.hasItem()
-                    && slot.mayPickup(player)
-                    && ItemStack.isSameItemSameComponents(slot.getItem(), template)) {
-                ItemStack removed = slot.safeTake(slot.getItem().getCount(), Integer.MAX_VALUE, player);
-                if (!removed.isEmpty()) {
-                    player.drop(removed, false, true);
+        this.aun$isDroppingAll = true;
+        try {
+            for (int i = 0; i < this.slots.size(); i++) {
+                if (i == slotId) {
+                    continue;
+                }
+                Slot slot = this.slots.get(i);
+                if (slot.container == originSlot.container
+                        && slot.hasItem()
+                        && slot.mayPickup(player)
+                        && ItemStack.isSameItemSameComponents(slot.getItem(), template)) {
+                    this.doClick(i, 1, ContainerInput.THROW, player);
                 }
             }
+        } finally {
+            this.aun$isDroppingAll = false;
         }
     }
 }
