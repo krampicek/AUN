@@ -2,7 +2,6 @@ package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelSummary;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -43,19 +42,5 @@ public abstract class LevelSummaryMixin {
         } else if (tier == 2) {
             cir.setReturnValue("§b❖ [DIAMOND] §r" + cir.getReturnValue());
         }
-    }
-
-    @Inject(method = "getInfo", at = @At("RETURN"), cancellable = true, require = 0)
-    private void aun$appendWorldPlaytimeHours(CallbackInfoReturnable<Component> cir) {
-        if (!AunConfigManager.get().worldPlaytimeDisplay) {
-            return;
-        }
-        Component original = cir.getReturnValue();
-        if (original == null) {
-            return;
-        }
-        String myId = AunWorldFavorites.getLevelIdFromSummary(this);
-        long hours = AunWorldFavorites.getWorldPlaytimeHours(myId);
-        cir.setReturnValue(original.copy().append(Component.literal(String.format(" §e(%04dh 🕚)", hours))));
     }
 }
