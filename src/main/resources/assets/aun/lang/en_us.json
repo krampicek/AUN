@@ -31,6 +31,14 @@
   "text.autoconfig.aun.option.autoToolSwitch": "Switch Tools While Mining",
   "text.autoconfig.aun.option.autoToolSwitch.@Tooltip": "When you start mining a block, your hotbar jumps to the tool that mines it fastest.",
 
+  "text.autoconfig.aun.option.bookScroll": "Book Scroll",
+  "text.autoconfig.aun.option.bookScroll.@Tooltip": "Turn the pages of a book with the mouse wheel.",
+  "text.autoconfig.aun.option.fullbright": "Fullbright",
+  "text.autoconfig.aun.option.fullbright.@Tooltip": "Allows the Fullbright key (default H, change it in the controls menu) to toggle full brightness.",
+
+  "key.aun.fullbright": "Toggle Fullbright",
+  "key.category.aun.main": "A-U-N",
+
   "text.autoconfig.aun.option.antiEndermanPickup": "Anti-Enderman Block Pickup",
   "text.autoconfig.aun.option.antiEndermanPickup.@Tooltip": "Endermen can no longer pick up or place blocks.",
   "text.autoconfig.aun.option.hideBeaconBeamBehindTintedGlass": "Tinted Glass Hides Beacon Beam",

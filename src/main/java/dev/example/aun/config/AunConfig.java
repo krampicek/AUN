@@ -28,6 +28,8 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean horseInfo = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
 
     // --------------------------- Vanilla+ ----------------------------
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean antiEndermanPickup = true;

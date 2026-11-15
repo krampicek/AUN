@@ -8,5 +8,6 @@ public class AunClient implements ClientModInitializer {
     public void onInitializeClient() {
         CutThroughHandler.register();
         AutoToolSwitch.register();
+        FullbrightHandler.register();
     }
 }

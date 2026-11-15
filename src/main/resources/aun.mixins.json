@@ -18,7 +18,8 @@
     "ServerPlayerMixin"
   ],
   "client": [
-    "AnvilScreenMixin"
+    "AnvilScreenMixin",
+    "BookViewScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0
