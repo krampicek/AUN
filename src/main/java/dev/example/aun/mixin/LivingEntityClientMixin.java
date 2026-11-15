@@ -20,11 +20,15 @@ public abstract class LivingEntityClientMixin {
     private static final StackWalker AUN_STACK_WALKER =
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
-    @Inject(method = "tickEffects", at = @At("HEAD"), require = 0)
+    @Inject(method = "tickEffects", at = @At("HEAD"), cancellable = true, require = 0)
     private void aun$markOwnEffectParticlesStart(CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
         if (client != null && (Object) this == client.player) {
             AunClientFeatures.inLocalPlayerTickEffects = true;
+            if (AunClientFeatures.shouldCancelOwnEffectParticle()) {
+                AunClientFeatures.inLocalPlayerTickEffects = false;
+                ci.cancel();
+            }
         }
     }
 
@@ -53,9 +57,9 @@ public abstract class LivingEntityClientMixin {
             return;
         }
         boolean calledByRenderer = AUN_STACK_WALKER.walk(stream ->
-                stream.limit(8).anyMatch(frame -> {
+                stream.limit(10).anyMatch(frame -> {
                     String name = frame.getClassName();
-                    return name.contains("renderer.entity") || name.contains("InventoryScreen");
+                    return name.contains("client.renderer") || name.contains("InventoryScreen");
                 }));
         if (calledByRenderer) {
             cir.setReturnValue(ItemStack.EMPTY);
