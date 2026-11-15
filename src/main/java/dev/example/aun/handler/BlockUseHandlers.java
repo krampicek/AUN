@@ -1,5 +1,6 @@
 package dev.example.aun.handler;
 
+import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -13,27 +14,34 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Right-click-on-block features:
- *   Reach behind signs (crouch = edit the sign), Simple Harvest, and Log Stripping Fix.
- */
 public final class BlockUseHandlers {
 
     private BlockUseHandlers() {}
 
     public static void register() {
         UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
-            if (hand != InteractionHand.MAIN_HAND || player.isSpectator() || player.isShiftKeyDown()) {
+            if (player.isSpectator()) {
                 return InteractionResult.PASS;
             }
             AunConfig cfg = AunConfigManager.get();
             BlockPos pos = hit.getBlockPos();
             BlockState state = level.getBlockState(pos);
 
-            if (cfg.noAccidentalLogStripping
-                    && player.getMainHandItem().is(ItemTags.AXES)
-                    && isUnstrippedWoodOrBamboo(state)) {
-                return InteractionResult.FAIL;
+            // AG: Prevent accidental log stripping when holding an offhand item or holding right-click continuously
+            if (cfg.noAccidentalLogStripping && isUnstrippedWoodOrBamboo(state)) {
+                if (hand == InteractionHand.MAIN_HAND && player.getMainHandItem().is(ItemTags.AXES)) {
+                    boolean hasOffhandItem = !player.getOffhandItem().isEmpty();
+                    boolean holdingRightClick = level.isClientSide() && AunClientFeatures.isHoldingRightClickContinuously();
+                    if (hasOffhandItem || holdingRightClick) {
+                        return InteractionResult.PASS;
+                    }
+                } else if (hand == InteractionHand.OFF_HAND && player.getOffhandItem().is(ItemTags.AXES)) {
+                    return InteractionResult.FAIL;
+                }
+            }
+
+            if (hand != InteractionHand.MAIN_HAND || player.isShiftKeyDown()) {
+                return InteractionResult.PASS;
             }
 
             if (cfg.reachBehindSign && state.getBlock() instanceof WallSignBlock) {
