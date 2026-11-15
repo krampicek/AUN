@@ -17,6 +17,6 @@ public abstract class LocatorBarMixin {
             GuiGraphicsExtractor graphics,
             DeltaTracker deltaTracker,
             CallbackInfo ci) {
-        AunWorldFavorites.updateHeadLocatorOverlay();
+        AunWorldFavorites.renderPlayerHeadsOnLocatorBar(graphics);
     }
 }
