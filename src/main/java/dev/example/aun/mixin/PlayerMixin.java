@@ -1,6 +1,7 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.Aun;
+import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -24,14 +25,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Player features:
- *   - Persistent player drops (BD)
- *   - Stack refill (H)
- *   - Auto-climb ladders (AF)
- *   - Nether portal link memory fix (F)
- *   - Hide player nametags (Q)
- */
 @Mixin(Player.class)
 public abstract class PlayerMixin {
 
@@ -71,9 +64,10 @@ public abstract class PlayerMixin {
     @Inject(method = "tick", at = @At("TAIL"), require = 0)
     private void aun$onPlayerTick(CallbackInfo ci) {
         Player self = (Player) (Object) this;
+        AunConfig cfg = AunConfigManager.get();
+        cfg.syncMirrors();
 
-        // AF: Auto-climb ladders
-        if (AunConfigManager.get().autoClimbLadders
+        if (cfg.autoClimbLadders
                 && self.onClimbable()
                 && !self.isSpectator()
                 && !self.getAbilities().flying) {
@@ -89,12 +83,10 @@ public abstract class PlayerMixin {
         }
 
         if (!self.level().isClientSide()) {
-            // F: Nether portal link fix
             if (self instanceof ServerPlayer serverPlayer) {
                 this.aun$handleNetherPortalLinking(serverPlayer);
             }
 
-            // H: Stack refill (server-side)
             if (!self.isCreative() && !self.isSpectator()) {
                 this.aun$handleStackRefill(self);
             }
