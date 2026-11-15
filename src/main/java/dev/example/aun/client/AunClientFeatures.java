@@ -8,8 +8,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.NarratorStatus;
+import net.minecraft.client.Options;
 import net.minecraft.resources.Identifier;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
@@ -21,13 +23,15 @@ public final class AunClientFeatures {
     private static KeyMapping zoomKey;
     private static KeyMapping faceIntoKey;
     private static KeyMapping faceAwayKey;
+    private static KeyMapping cachedToggleGuiKey;
+    private static boolean searchedToggleGuiKey = false;
 
     /** 0 = normal, 1 = facing into block, 2 = facing away from block. */
     private static volatile int placeFacingMode = 0;
 
     /** Better F1 state: 0 = normal, 1 = hide HUD only (hand visible), 2 = hide HUD + hand. */
     private static int f1State = 0;
-    private static boolean expectedHideGui = false;
+    private static boolean wasF1Down = false;
 
     private AunClientFeatures() {}
 
@@ -63,6 +67,26 @@ public final class AunClientFeatures {
         }
     }
 
+    private static KeyMapping findToggleGuiKey(Options options) {
+        if (!searchedToggleGuiKey) {
+            searchedToggleGuiKey = true;
+            for (Field field : Options.class.getDeclaredFields()) {
+                if (KeyMapping.class.isAssignableFrom(field.getType())) {
+                    try {
+                        field.setAccessible(true);
+                        KeyMapping km = (KeyMapping) field.get(options);
+                        if (km != null && "key.toggleGui".equals(km.getName())) {
+                            cachedToggleGuiKey = km;
+                            break;
+                        }
+                    } catch (ReflectiveOperationException ignored) {
+                    }
+                }
+            }
+        }
+        return cachedToggleGuiKey;
+    }
+
     private static void onStartTick(Minecraft client) {
         if (client.options == null) {
             return;
@@ -79,6 +103,32 @@ public final class AunClientFeatures {
         // J: Keep Vanilla Narrator disabled
         if (cfg.disableNarrator && client.options.narrator().get() != NarratorStatus.OFF) {
             client.options.narrator().set(NarratorStatus.OFF);
+        }
+
+        // AC: Better F1 (3-state cycle: Normal -> Hide HUD only -> Hide HUD & Hand -> Normal)
+        KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
+        if (toggleGuiKey != null) {
+            boolean down = toggleGuiKey.isDown();
+            if (cfg.betterF1) {
+                if (down && !wasF1Down) {
+                    if (f1State == 0) {
+                        f1State = 1;
+                        // Swallow the first F1 press so vanilla keeps the hand visible while we hide the HUD
+                        while (toggleGuiKey.consumeClick()) {
+                            // swallowed
+                        }
+                    } else if (f1State == 1) {
+                        // Let vanilla process this F1 press so it hides both HUD and hand
+                        f1State = 2;
+                    } else {
+                        // Let vanilla process this F1 press so it restores both HUD and hand
+                        f1State = 0;
+                    }
+                }
+            } else {
+                f1State = 0;
+            }
+            wasF1Down = down;
         }
     }
 
@@ -99,18 +149,6 @@ public final class AunClientFeatures {
             }
         } else {
             placeFacingMode = 0;
-        }
-
-        // AC: Better F1 (3-state cycle: Normal -> Hide HUD only -> Hide HUD & Hand -> Normal)
-        if (cfg.betterF1) {
-            if (client.options.hideGui != expectedHideGui) {
-                f1State = (f1State + 1) % 3;
-                client.options.hideGui = (f1State == 2);
-                expectedHideGui = client.options.hideGui;
-            }
-        } else {
-            f1State = client.options.hideGui ? 2 : 0;
-            expectedHideGui = client.options.hideGui;
         }
     }
 
