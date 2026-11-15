@@ -68,9 +68,11 @@ public final class FullbrightHandler {
                     MobEffects.NIGHT_VISION, MobEffectInstance.INFINITE_DURATION, 0, false, false, false));
                 ours = true;
             }
-        } else if (ours) {
-            client.player.removeEffect(MobEffects.NIGHT_VISION);
-            ours = false;
+        } else {
+            if (ours) {
+                client.player.removeEffect(MobEffects.NIGHT_VISION);
+                ours = false;
+            }
         }
     }
 }
