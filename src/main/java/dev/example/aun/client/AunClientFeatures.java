@@ -53,6 +53,8 @@ public final class AunClientFeatures {
     /** AD: Dynamic lights tracking. */
     private static BlockPos lastLightBlockPos = null;
     private static int lastHeldLightLevel = 0;
+    private static Method setSectionDirtyMethod = null;
+    private static boolean searchedSectionDirtyMethod = false;
 
     private AunClientFeatures() {}
 
@@ -198,12 +200,34 @@ public final class AunClientFeatures {
     }
 
     private static void markLightAreaDirty(Minecraft client, BlockPos center) {
-        if (client.levelRenderer == null) {
+        if (client.level == null || client.levelRenderer == null) {
             return;
         }
-        client.levelRenderer.setBlocksDirty(
-                center.getX() - 12, center.getY() - 12, center.getZ() - 12,
-                center.getX() + 12, center.getY() + 12, center.getZ() + 12);
+        client.level.getLightEngine().checkBlock(center);
+        if (!searchedSectionDirtyMethod) {
+            searchedSectionDirtyMethod = true;
+            try {
+                setSectionDirtyMethod = client.levelRenderer.getClass()
+                        .getDeclaredMethod("setSectionDirty", int.class, int.class, int.class);
+                setSectionDirtyMethod.setAccessible(true);
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
+        if (setSectionDirtyMethod != null) {
+            int sx = center.getX() >> 4;
+            int sy = center.getY() >> 4;
+            int sz = center.getZ() >> 4;
+            try {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            setSectionDirtyMethod.invoke(client.levelRenderer, sx + dx, sy + dy, sz + dz);
+                        }
+                    }
+                }
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
     }
 
     public static int getHeldLightLevel(Player player) {
