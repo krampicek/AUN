@@ -34,7 +34,9 @@
     "LevelStorageAccessMixin",
     "ItemEnchantmentsMixin",
     "MinecraftServerMixin",
-    "LightEngineMixin"
+    "LightEngineMixin",
+    "SlotMixin",
+    "LevelSummaryMixin"
   ],
   "client": [
     "AnvilScreenMixin",
@@ -52,7 +54,8 @@
     "ClientLevelMixin",
     "ScreenMixin",
     "LoadingOverlayMixin",
-    "LanguageSelectScreenMixin"
+    "LanguageSelectScreenMixin",
+    "LocatorBarMixin"
   ],
   "injectors": {
     "defaultRequire": 0
