@@ -12,23 +12,28 @@ import net.minecraft.client.Options;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 public final class AunClientFeatures {
 
     private static KeyMapping zoomKey;
     private static KeyMapping faceIntoKey;
     private static KeyMapping faceAwayKey;
-    private static KeyMapping cachedToggleGuiKey;
-    private static boolean searchedToggleGuiKey = false;
 
     private static volatile int placeFacingMode = 0;
+
+    /** Better F1 state: 0 = normal, 1 = hide HUD only (hand visible), 2 = hide HUD + hand. */
     private static int f1State = 0;
-    private static boolean wasF1Down = false;
+    private static Field hideGuiField = null;
+    private static boolean searchedHideGuiField = false;
 
     public static boolean inLocalPlayerTickEffects = false;
     public static boolean inGuiHudRender = false;
@@ -41,6 +46,8 @@ public final class AunClientFeatures {
     private static int lastHeldLightLevel = 0;
     private static Method setSectionDirtyMethod = null;
     private static boolean searchedSectionDirtyMethod = false;
+
+    private static Boolean lastNetherCalcState = null;
 
     private AunClientFeatures() {}
 
@@ -76,24 +83,67 @@ public final class AunClientFeatures {
         }
     }
 
-    private static KeyMapping findToggleGuiKey(Options options) {
-        if (!searchedToggleGuiKey) {
-            searchedToggleGuiKey = true;
-            for (Field field : Options.class.getDeclaredFields()) {
-                if (KeyMapping.class.isAssignableFrom(field.getType())) {
-                    try {
-                        field.setAccessible(true);
-                        KeyMapping km = (KeyMapping) field.get(options);
-                        if (km != null && "key.toggleGui".equals(km.getName())) {
-                            cachedToggleGuiKey = km;
-                            break;
-                        }
-                    } catch (ReflectiveOperationException ignored) {
-                    }
+    public static boolean isConfiguredBindingDown(Minecraft client, String spec) {
+        if (client == null || client.getWindow() == null || spec == null || spec.isBlank()) {
+            return false;
+        }
+        String s = spec.trim().toUpperCase(Locale.ROOT).replace(" ", "");
+        try {
+            long windowHandle = client.getWindow().handle();
+            if (s.startsWith("MOUSE")) {
+                int btn = Integer.parseInt(s.substring(5)) - 1;
+                if (btn >= 0 && btn <= 7) {
+                    return GLFW.glfwGetMouseButton(windowHandle, btn) == GLFW.GLFW_PRESS;
                 }
             }
+            int keyCode = switch (s) {
+                case "LCTRL", "CTRL", "LEFTCONTROL" -> InputConstants.KEY_LCONTROL;
+                case "RCTRL", "RIGHTCONTROL" -> InputConstants.KEY_RCONTROL;
+                case "LALT", "ALT", "LEFTALT" -> InputConstants.KEY_LALT;
+                case "RALT", "RIGHTALT" -> InputConstants.KEY_RALT;
+                case "LSHIFT", "SHIFT" -> InputConstants.KEY_LSHIFT;
+                case "RSHIFT" -> InputConstants.KEY_RSHIFT;
+                case "TAB" -> InputConstants.KEY_TAB;
+                case "CAPSLOCK" -> InputConstants.KEY_CAPSLOCK;
+                default -> s.length() == 1 ? (int) s.charAt(0) : -1;
+            };
+            if (keyCode > 0) {
+                return InputConstants.isKeyDown(client.getWindow(), keyCode);
+            }
+        } catch (Throwable ignored) {
         }
-        return cachedToggleGuiKey;
+        return false;
+    }
+
+    /** Called by KeyboardHandlerMixin when F1 is pressed in-game. Returns true to cancel vanilla F1. */
+    public static boolean handleF1KeyPress(Minecraft client) {
+        if (!AunConfigManager.get().betterF1 || client.screen != null) {
+            f1State = 0;
+            return false;
+        }
+        f1State = (f1State + 1) % 3;
+        setVanillaHideGui(client.options, f1State == 2);
+        return true;
+    }
+
+    private static void setVanillaHideGui(Options options, boolean value) {
+        if (options == null) {
+            return;
+        }
+        if (!searchedHideGuiField) {
+            searchedHideGuiField = true;
+            try {
+                hideGuiField = Options.class.getDeclaredField("hideGui");
+                hideGuiField.setAccessible(true);
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
+        if (hideGuiField != null) {
+            try {
+                hideGuiField.setBoolean(options, value);
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
     }
 
     private static void onStartTick(Minecraft client) {
@@ -116,25 +166,15 @@ public final class AunClientFeatures {
             client.options.exclusiveFullscreen().set(false);
         }
 
-        KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
-        if (toggleGuiKey != null) {
-            boolean down = toggleGuiKey.isDown();
-            if (cfg.betterF1) {
-                if (down && !wasF1Down) {
-                    if (f1State == 0) {
-                        f1State = 1;
-                        while (toggleGuiKey.consumeClick()) {
-                        }
-                    } else if (f1State == 1) {
-                        f1State = 2;
-                    } else {
-                        f1State = 0;
-                    }
+        // Sync /nethercalc command visibility in chat whenever the toggle changes
+        if (lastNetherCalcState == null || lastNetherCalcState != cfg.netherCalc) {
+            lastNetherCalcState = cfg.netherCalc;
+            MinecraftServer server = client.getSingleplayerServer();
+            if (server != null) {
+                for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+                    server.getCommands().sendCommands(sp);
                 }
-            } else {
-                f1State = 0;
             }
-            wasF1Down = down;
         }
     }
 
@@ -143,11 +183,16 @@ public final class AunClientFeatures {
             return;
         }
         AunConfig cfg = AunConfigManager.get();
+        cfg.syncMirrors();
 
-        if (cfg.facingPlacement) {
-            if (faceIntoKey != null && faceIntoKey.isDown()) {
+        if (cfg.facingPlacement && client.screen == null) {
+            boolean into = (faceIntoKey != null && faceIntoKey.isDown())
+                    || isConfiguredBindingDown(client, cfg.faceIntoKeybind);
+            boolean away = (faceAwayKey != null && faceAwayKey.isDown())
+                    || isConfiguredBindingDown(client, cfg.faceAwayKeybind);
+            if (into) {
                 placeFacingMode = 1;
-            } else if (faceAwayKey != null && faceAwayKey.isDown()) {
+            } else if (away) {
                 placeFacingMode = 2;
             } else {
                 placeFacingMode = 0;
@@ -284,14 +329,24 @@ public final class AunClientFeatures {
     }
 
     public static boolean shouldHideLocalPlayerArmorNow() {
-        if (!AunConfigManager.get().hideArmor || !armorVisualHidden) {
+        AunConfig cfg = AunConfigManager.get();
+        cfg.syncMirrors();
+        if (!cfg.hideArmor || !armorVisualHidden) {
             return false;
         }
         return System.currentTimeMillis() >= lastDamageRevealUntilMs;
     }
 
     public static boolean isZooming() {
-        return AunConfigManager.get().zoom && zoomKey != null && zoomKey.isDown();
+        AunConfig cfg = AunConfigManager.get();
+        if (!cfg.zoom) {
+            return false;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.screen != null) {
+            return false;
+        }
+        return (zoomKey != null && zoomKey.isDown()) || isConfiguredBindingDown(client, cfg.zoomKeybind);
     }
 
     public static boolean shouldHideHudOnly() {
@@ -303,9 +358,6 @@ public final class AunClientFeatures {
     }
 
     public static boolean shouldCancelOwnEffectParticle() {
-        if (!inLocalPlayerTickEffects) {
-            return false;
-        }
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.options == null) {
             return false;
