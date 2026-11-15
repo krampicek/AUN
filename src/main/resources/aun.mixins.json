@@ -28,7 +28,11 @@
     "ProjectileMixin",
     "BlockItemMixin",
     "GameModeLockMixin",
-    "AbstractContainerMenuMixin"
+    "AbstractContainerMenuMixin",
+    "BundleContentsMixin",
+    "PackCompatibilityMixin",
+    "LevelStorageAccessMixin",
+    "ItemEnchantmentsMixin"
   ],
   "client": [
     "AnvilScreenMixin",
@@ -36,7 +40,13 @@
     "BookEditScreenMixin",
     "GuiMixin",
     "GameRendererMixin",
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "ClientBundleTooltipMixin",
+    "WindowMixin",
+    "CameraMixin",
+    "ChatComponentMixin",
+    "LivingEntityClientMixin",
+    "ClientLevelMixin"
   ],
   "injectors": {
     "defaultRequire": 0
