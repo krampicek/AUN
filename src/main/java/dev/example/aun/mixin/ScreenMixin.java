@@ -98,16 +98,20 @@ public abstract class ScreenMixin {
         }
     }
 
-    @Inject(method = "removed", at = @At("HEAD"), require = 0)
+    @Inject(method = "removed()V", at = @At("HEAD"), require = 0)
     private void aun$onScreenRemoved(CallbackInfo ci) {
         AunWorldFavorites.resetChestSearch();
     }
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(
+        method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
     private void aun$onMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
         Object self = this;
 
-        // AQ: Right-click search bar to clear search query
         if (this.aun$chestSearchBtn != null
                 && event.button() == 1
                 && this.aun$chestSearchBtn.isMouseOver(event.x(), event.y())) {
@@ -117,7 +121,6 @@ public abstract class ScreenMixin {
             return;
         }
 
-        // AH: Recipe Book Origin Material on right-clicking a required item in crafting grid
         if (self instanceof AbstractContainerScreen<?> containerScreen
                 && AunConfigManager.get().recipeBookOrigin
                 && event.button() == 1) {
@@ -131,7 +134,6 @@ public abstract class ScreenMixin {
             }
         }
 
-        // X: Chat Text Copy when clicking a chat line in ChatScreen (Right-click or Ctrl+Click)
         if (self instanceof ChatScreen
                 && AunConfigManager.get().chatTextCopy
                 && (event.button() == 1 || event.hasControlDown())) {
@@ -141,7 +143,12 @@ public abstract class ScreenMixin {
         }
     }
 
-    @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(
+        method = "charTyped(Lnet/minecraft/client/input/CharacterEvent;)Z",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
     private void aun$onCharTyped(CharacterEvent event, CallbackInfoReturnable<Boolean> cir) {
         if (this.aun$chestSearchBtn != null && AunWorldFavorites.isSearchFocused()) {
             String ch = event.codepointAsString();
@@ -153,30 +160,34 @@ public abstract class ScreenMixin {
         }
     }
 
-    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(
+        method = "keyPressed(Lnet/minecraft/client/input/KeyEvent;)Z",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
     private void aun$onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
         if (this.aun$chestSearchBtn != null && AunWorldFavorites.isSearchFocused()) {
             int key = event.key();
-            if (key == 256) { // Escape clears/unfocuses search bar
+            if (key == 256) {
                 AunWorldFavorites.clearSearchQuery();
                 AunWorldFavorites.setSearchFocused(false);
                 this.aun$chestSearchBtn.setMessage(AunWorldFavorites.getSearchButtonLabel());
                 cir.setReturnValue(true);
                 return;
             }
-            if (key == 257 || key == 335) { // Enter unfocuses search bar
+            if (key == 257 || key == 335) {
                 AunWorldFavorites.setSearchFocused(false);
                 this.aun$chestSearchBtn.setMessage(AunWorldFavorites.getSearchButtonLabel());
                 cir.setReturnValue(true);
                 return;
             }
-            if (key == 259) { // Backspace deletes last char
+            if (key == 259) {
                 AunWorldFavorites.backspaceSearchChar();
                 this.aun$chestSearchBtn.setMessage(AunWorldFavorites.getSearchButtonLabel());
                 cir.setReturnValue(true);
                 return;
             }
-            // Swallow regular keys (like E) while typing in the search bar so the chest doesn't close
             Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.options != null && mc.options.keyInventory.matches(event)) {
                 cir.setReturnValue(true);
