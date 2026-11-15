@@ -81,7 +81,7 @@ public final class AunClientFeatures {
                 try {
                     f.setAccessible(true);
                     InputConstants.Key k = (InputConstants.Key) f.get(km);
-                    if (k != null && k.getType() == InputConstants.Type.KEYSYM && k.getValue() > 0) return InputConstants.isKeyDown(k.getValue());
+                    if (k != null && k.getValue() > 7) return InputConstants.isKeyDown(k.getValue());
                 } catch (ReflectiveOperationException ignored) {}
             }
         }
