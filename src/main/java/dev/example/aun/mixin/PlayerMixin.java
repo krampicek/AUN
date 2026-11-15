@@ -32,7 +32,9 @@ public abstract class PlayerMixin {
 
     @Unique private int aun$trackedHotbarSlot = -1;
     @Unique private ItemStack aun$trackedMainStack = ItemStack.EMPTY;
+    @Unique private int aun$trackedMainTotalCount = 0;
     @Unique private ItemStack aun$trackedOffhandStack = ItemStack.EMPTY;
+    @Unique private int aun$trackedOffhandTotalCount = 0;
     @Unique private boolean aun$droppedThisTick = false;
 
     @Unique private ResourceKey<Level> aun$lastDimension = null;
@@ -97,6 +99,7 @@ public abstract class PlayerMixin {
     @Unique
     private void aun$handleNetherPortalLinking(ServerPlayer player) {
         ResourceKey<Level> currentDim = player.level().dimension();
+        ServerLevel serverLevel = (ServerLevel) player.level();
         BlockPos currentPos = player.blockPosition();
 
         if (this.aun$lastDimension != null && !this.aun$lastDimension.equals(currentDim)) {
@@ -104,11 +107,10 @@ public abstract class PlayerMixin {
                     (this.aun$lastDimension.equals(Level.OVERWORLD) && currentDim.equals(Level.NETHER))
                     || (this.aun$lastDimension.equals(Level.NETHER) && currentDim.equals(Level.OVERWORLD));
             if (isOverworldNetherSwap && this.aun$lastPortalBlockPos != null && AunConfigManager.get().netherPortalFix) {
-                String fromKey = aun$portalKey(this.aun$lastDimension, this.aun$lastPortalBlockPos);
+                String fromKey = aun$portalKey(player, this.aun$lastDimension, this.aun$lastPortalBlockPos);
                 BlockPos rememberedDest = AUN_PORTAL_LINKS.get(fromKey);
-                ServerLevel destLevel = (ServerLevel) player.level();
                 if (rememberedDest != null) {
-                    BlockPos validPortal = aun$findNearestPortalBlock(destLevel, rememberedDest, 4);
+                    BlockPos validPortal = aun$findNearestPortalBlock(serverLevel, rememberedDest, 6);
                     if (validPortal != null) {
                         player.teleportTo(
                                 validPortal.getX() + 0.5D,
@@ -117,62 +119,76 @@ public abstract class PlayerMixin {
                         currentPos = validPortal;
                     }
                 }
-                BlockPos arrivalPortal = aun$findNearestPortalBlock(destLevel, currentPos, 4);
+                BlockPos arrivalPortal = aun$findNearestPortalBlock(serverLevel, currentPos, 6);
                 if (arrivalPortal != null) {
                     AUN_PORTAL_LINKS.put(fromKey, arrivalPortal.immutable());
-                    AUN_PORTAL_LINKS.put(aun$portalKey(currentDim, arrivalPortal), this.aun$lastPortalBlockPos.immutable());
+                    AUN_PORTAL_LINKS.put(aun$portalKey(player, currentDim, arrivalPortal), this.aun$lastPortalBlockPos.immutable());
                 }
             }
         }
 
-        if (player.level().getBlockState(currentPos).is(Blocks.NETHER_PORTAL)) {
-            this.aun$lastPortalBlockPos = currentPos.immutable();
+        BlockPos nearbyPortal = aun$findNearestPortalBlock(serverLevel, currentPos, 2);
+        if (nearbyPortal != null) {
+            this.aun$lastPortalBlockPos = nearbyPortal;
         }
         this.aun$lastDimension = currentDim;
     }
 
     @Unique
-    private static String aun$portalKey(ResourceKey<Level> dim, BlockPos pos) {
-        return dim.toString() + ":" + (pos.getX() >> 2) + ":" + (pos.getY() >> 2) + ":" + (pos.getZ() >> 2);
+    private static String aun$portalKey(ServerPlayer player, ResourceKey<Level> dim, BlockPos pos) {
+        return player.getUUID() + ":" + dim.toString() + ":" + (pos.getX() >> 3) + ":" + (pos.getZ() >> 3);
     }
 
     @Unique
     private static BlockPos aun$findNearestPortalBlock(ServerLevel level, BlockPos center, int radius) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
         for (BlockPos check : BlockPos.betweenClosed(
                 center.offset(-radius, -radius, -radius),
                 center.offset(radius, radius, radius))) {
             if (level.getBlockState(check).is(Blocks.NETHER_PORTAL)) {
-                return check.immutable();
+                double d = check.distSqr(center);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = check.immutable();
+                }
             }
         }
-        return null;
+        return best;
     }
 
     @Unique
     private void aun$handleStackRefill(Player player) {
         Inventory inv = player.getInventory();
-        boolean containerOpen = player.containerMenu != player.inventoryMenu;
+        boolean cursorHoldingItem = !player.containerMenu.getCarried().isEmpty();
 
-        if (AunConfigManager.get().stackRefill && !this.aun$droppedThisTick && !containerOpen) {
+        if (AunConfigManager.get().stackRefill && !this.aun$droppedThisTick && !cursorHoldingItem) {
             if (this.aun$trackedHotbarSlot >= 0
                     && this.aun$trackedHotbarSlot < 9
                     && !this.aun$trackedMainStack.isEmpty()
                     && player.getMainHandItem().isEmpty()
                     && inv.getItem(this.aun$trackedHotbarSlot).isEmpty()) {
-                int match = aun$findMatchingSlot(inv, this.aun$trackedMainStack, this.aun$trackedHotbarSlot);
-                if (match != -1) {
-                    ItemStack replacement = inv.getItem(match).copy();
-                    inv.setItem(match, ItemStack.EMPTY);
-                    inv.setItem(this.aun$trackedHotbarSlot, replacement);
+                int currentTotal = aun$countTotalMatching(inv, this.aun$trackedMainStack);
+                // Only refill if an item was actually consumed/broken, NEVER if moved to another inventory slot!
+                if (currentTotal < this.aun$trackedMainTotalCount) {
+                    int match = aun$findMatchingSlot(inv, this.aun$trackedMainStack, this.aun$trackedHotbarSlot);
+                    if (match != -1) {
+                        ItemStack replacement = inv.getItem(match).copy();
+                        inv.setItem(match, ItemStack.EMPTY);
+                        inv.setItem(this.aun$trackedHotbarSlot, replacement);
+                    }
                 }
             }
 
             if (!this.aun$trackedOffhandStack.isEmpty() && player.getOffhandItem().isEmpty()) {
-                int match = aun$findMatchingSlot(inv, this.aun$trackedOffhandStack, -1);
-                if (match != -1) {
-                    ItemStack replacement = inv.getItem(match).copy();
-                    inv.setItem(match, ItemStack.EMPTY);
-                    player.setItemInHand(InteractionHand.OFF_HAND, replacement);
+                int currentTotal = aun$countTotalMatching(inv, this.aun$trackedOffhandStack);
+                if (currentTotal < this.aun$trackedOffhandTotalCount) {
+                    int match = aun$findMatchingSlot(inv, this.aun$trackedOffhandStack, -1);
+                    if (match != -1) {
+                        ItemStack replacement = inv.getItem(match).copy();
+                        inv.setItem(match, ItemStack.EMPTY);
+                        player.setItemInHand(InteractionHand.OFF_HAND, replacement);
+                    }
                 }
             }
         }
@@ -180,17 +196,37 @@ public abstract class PlayerMixin {
         ItemStack currentMain = player.getMainHandItem();
         this.aun$trackedHotbarSlot = -1;
         this.aun$trackedMainStack = ItemStack.EMPTY;
+        this.aun$trackedMainTotalCount = 0;
         if (!currentMain.isEmpty()) {
             for (int i = 0; i < 9; i++) {
                 if (inv.getItem(i) == currentMain) {
                     this.aun$trackedHotbarSlot = i;
                     this.aun$trackedMainStack = currentMain.copy();
+                    this.aun$trackedMainTotalCount = aun$countTotalMatching(inv, currentMain);
                     break;
                 }
             }
         }
         ItemStack currentOff = player.getOffhandItem();
-        this.aun$trackedOffhandStack = currentOff.isEmpty() ? ItemStack.EMPTY : currentOff.copy();
+        if (!currentOff.isEmpty()) {
+            this.aun$trackedOffhandStack = currentOff.copy();
+            this.aun$trackedOffhandTotalCount = aun$countTotalMatching(inv, currentOff) + currentOff.getCount();
+        } else {
+            this.aun$trackedOffhandStack = ItemStack.EMPTY;
+            this.aun$trackedOffhandTotalCount = 0;
+        }
+    }
+
+    @Unique
+    private static int aun$countTotalMatching(Inventory inv, ItemStack target) {
+        int sum = 0;
+        for (int i = 0; i < 36; i++) {
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, target)) {
+                sum += s.getCount();
+            }
+        }
+        return sum;
     }
 
     @Unique
