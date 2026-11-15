@@ -53,6 +53,23 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesThirdPerson = false;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean moreChatHistory = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean enchantmentDescriptions = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean hideArmor = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean dynamicLights = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean centralCrosshair = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean raisedHotbar = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fadelessLoading = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastQuit = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastLanguageReload = true;
+
+    @ConfigEntry.Category("qol")
+    @ConfigEntry.Gui.CollapsibleObject
+    public HideNametagsConfig hideNametags = new HideNametagsConfig();
+
+    public static class HideNametagsConfig {
+        @ConfigEntry.Gui.Tooltip public boolean hidePlayerNametags = false;
+        @ConfigEntry.Gui.Tooltip public boolean hideMobNametags = false;
+        @ConfigEntry.Gui.Tooltip public String hiddenMobsList = "";
+    }
 
     // --------------------------- Vanilla+ ----------------------------
     @ConfigEntry.Category("vanillaPlus")
@@ -92,4 +109,5 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean noAnimalTemptDelay = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean rocketElytraFix = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean stackedMinecartFix = true;
+    @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean netherPortalFix = true;
 }
