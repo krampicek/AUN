@@ -1,8 +1,10 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,23 +14,26 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Level.class)
+@Mixin({Level.class, ServerLevel.class})
 public abstract class LevelMixin {
 
     @Unique
     private static final StackWalker AUN_EXPLOSION_WALKER =
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
-    @ModifyVariable(method = "explode", at = @At("HEAD"), argsOnly = true, require = 0)
+    @ModifyVariable(method = "explode*", at = @At("HEAD"), argsOnly = true, require = 0)
     private Level.ExplosionInteraction aun$preventMobExplosionGrief(Level.ExplosionInteraction interaction) {
         if (interaction == Level.ExplosionInteraction.MOB) {
+            if (AunClientFeatures.inGhastFireballHit && AunConfigManager.get().mobGriefing.antiGhastGrief) {
+                return Level.ExplosionInteraction.NONE;
+            }
             boolean shouldBlock = AUN_EXPLOSION_WALKER.walk(stream ->
-                    stream.limit(10).anyMatch(frame -> {
+                    stream.limit(16).anyMatch(frame -> {
                         String cn = frame.getClassName();
-                        if (cn.endsWith("Creeper") && AunConfigManager.get().mobGriefing.antiCreeperGrief) {
+                        if (cn.contains("Creeper") && AunConfigManager.get().mobGriefing.antiCreeperGrief) {
                             return true;
                         }
-                        return (cn.endsWith("LargeFireball") || cn.endsWith("Ghast"))
+                        return (cn.contains("LargeFireball") || cn.contains("Fireball") || cn.contains("Ghast"))
                                 && AunConfigManager.get().mobGriefing.antiGhastGrief;
                     }));
             if (shouldBlock) {
@@ -58,3 +63,4 @@ public abstract class LevelMixin {
         }
     }
 }
+// END OF FILE
