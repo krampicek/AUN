@@ -35,6 +35,13 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoTotem = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoClimbLadders = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean noAccidentalLogStripping = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean zoom = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean betterF1 = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean disableNarrator = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean disableAdvancementKeybind = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean accurateBlockPlacement = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean ctrlDropAllSameItems = true;
 
     // --------------------------- Vanilla+ ----------------------------
     @ConfigEntry.Category("vanillaPlus")
@@ -65,6 +72,7 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noCropTrampleFeatherFalling = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noCropTrampleMobs = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean trueVanillaGamemodeLock = false;
 
     // ------------------------------ Fixes ----------------------------
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean piglinPortalFix = true;
