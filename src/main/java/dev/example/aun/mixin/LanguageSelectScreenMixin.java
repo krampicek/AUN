@@ -1,7 +1,6 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.config.AunConfigManager;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.LanguageSelectScreen;
@@ -25,7 +24,6 @@ public abstract class LanguageSelectScreenMixin extends OptionsSubScreen {
             return;
         }
         try {
-            // Copy selected language code via reflection on the inner Entry if selected, or let vanilla set it
             var listField = LanguageSelectScreen.class.getDeclaredField("languageSelectionList");
             listField.setAccessible(true);
             Object listWidget = listField.get(this);
@@ -41,12 +39,11 @@ public abstract class LanguageSelectScreenMixin extends OptionsSubScreen {
                         this.minecraft.getLanguageManager().onResourceManagerReload(this.minecraft.getResourceManager());
                         this.options.save();
                     }
-                    this.minecraft.setScreen(this.lastScreen);
+                    this.minecraft.setScreenAndShow(this.lastScreen);
                     ci.cancel();
                 }
             }
         } catch (Throwable ignored) {
-            // Fall back to vanilla behavior if fields differ
         }
     }
 }
