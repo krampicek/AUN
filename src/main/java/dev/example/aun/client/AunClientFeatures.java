@@ -18,12 +18,6 @@ import net.minecraft.world.item.ItemStack;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-/**
- * Client-side keybinds and state for Zoom (BG), Better F1 (AC),
- * Disable Narrator (J), Disable Advancements Keybind (K), Facing Placement (A),
- * Borderless Fullscreen (AU), Hide Own Particles (AE), Hide Armor (BB),
- * Dynamic Lights (AD), and Raised Hotbar (AI).
- */
 public final class AunClientFeatures {
 
     private static KeyMapping zoomKey;
@@ -32,25 +26,17 @@ public final class AunClientFeatures {
     private static KeyMapping cachedToggleGuiKey;
     private static boolean searchedToggleGuiKey = false;
 
-    /** 0 = normal, 1 = facing into block, 2 = facing away from block. */
     private static volatile int placeFacingMode = 0;
-
-    /** Better F1 state: 0 = normal, 1 = hide HUD only (hand visible), 2 = hide HUD + hand. */
     private static int f1State = 0;
     private static boolean wasF1Down = false;
 
-    /** True while LocalPlayer is ticking its own status effect particles. */
     public static boolean inLocalPlayerTickEffects = false;
-
-    /** True while Gui.extractRenderState is drawing the HUD. */
     public static boolean inGuiHudRender = false;
 
-    /** BB: Hide armor visual toggle controlled by the eye icon in InventoryScreen. */
     private static boolean armorVisualHidden = false;
     private static long lastDamageRevealUntilMs = 0L;
     private static int prevHurtTime = 0;
 
-    /** AD: Dynamic lights tracking. */
     private static BlockPos lastLightBlockPos = null;
     private static int lastHeldLightLevel = 0;
     private static Method setSectionDirtyMethod = null;
@@ -111,29 +97,25 @@ public final class AunClientFeatures {
     }
 
     private static void onStartTick(Minecraft client) {
+        AunConfig cfg = AunConfigManager.get();
+        cfg.syncMirrors();
         if (client.options == null) {
             return;
         }
-        AunConfig cfg = AunConfigManager.get();
 
-        // K: Swallow Advancements keybind presses before Minecraft processes them
         if (cfg.disableAdvancementKeybind) {
             while (client.options.keyAdvancements.consumeClick()) {
-                // ignored
             }
         }
 
-        // J: Keep Vanilla Narrator disabled
         if (cfg.disableNarrator && client.options.narrator().get() != NarratorStatus.OFF) {
             client.options.narrator().set(NarratorStatus.OFF);
         }
 
-        // AU: Borderless fullscreen option sync
         if (cfg.borderlessFullscreen && Boolean.TRUE.equals(client.options.exclusiveFullscreen().get())) {
             client.options.exclusiveFullscreen().set(false);
         }
 
-        // AC: Better F1 (3-state cycle: Normal -> Hide HUD only -> Hide HUD & Hand -> Normal)
         KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
         if (toggleGuiKey != null) {
             boolean down = toggleGuiKey.isDown();
@@ -142,7 +124,6 @@ public final class AunClientFeatures {
                     if (f1State == 0) {
                         f1State = 1;
                         while (toggleGuiKey.consumeClick()) {
-                            // swallowed so hand stays visible
                         }
                     } else if (f1State == 1) {
                         f1State = 2;
@@ -163,7 +144,6 @@ public final class AunClientFeatures {
         }
         AunConfig cfg = AunConfigManager.get();
 
-        // A: Update directional placement mode
         if (cfg.facingPlacement) {
             if (faceIntoKey != null && faceIntoKey.isDown()) {
                 placeFacingMode = 1;
@@ -177,14 +157,12 @@ public final class AunClientFeatures {
         }
 
         if (client.player != null && client.level != null) {
-            // BB: Reveal armor for 5 seconds when taking damage
             int hurt = client.player.hurtTime;
             if (hurt > prevHurtTime && hurt > 0) {
                 lastDamageRevealUntilMs = System.currentTimeMillis() + 5000L;
             }
             prevHurtTime = hurt;
 
-            // AD: Dynamic lights chunk refresh when player moves or switches light items
             int currentLight = cfg.dynamicLights ? getHeldLightLevel(client.player) : 0;
             BlockPos currentPos = client.player.blockPosition();
             if (currentLight != lastHeldLightLevel
@@ -242,7 +220,6 @@ public final class AunClientFeatures {
             return 0;
         }
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        // Soul items give a smaller light level (10)
         if (path.equals("soul_torch") || path.equals("soul_lantern") || path.equals("soul_campfire")) {
             return 10;
         }
@@ -334,6 +311,7 @@ public final class AunClientFeatures {
             return false;
         }
         AunConfig cfg = AunConfigManager.get();
+        cfg.syncMirrors();
         if (client.options.getCameraType().isFirstPerson()) {
             return cfg.hideOwnParticlesFirstPerson;
         } else {
