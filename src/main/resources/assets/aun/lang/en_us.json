@@ -32,9 +32,11 @@
   "text.autoconfig.aun.option.autoToolSwitch.@Tooltip": "When you start mining a block, your hotbar jumps to the tool that mines it fastest.",
 
   "text.autoconfig.aun.option.bookScroll": "Book Scroll",
-  "text.autoconfig.aun.option.bookScroll.@Tooltip": "Turn the pages of a book with the mouse wheel.",
+  "text.autoconfig.aun.option.bookScroll.@Tooltip": "Turn the pages of a book or Book and Quill with the mouse wheel.",
   "text.autoconfig.aun.option.fullbright": "Fullbright",
   "text.autoconfig.aun.option.fullbright.@Tooltip": "Allows the Fullbright key (default H, change it in the controls menu) to toggle full brightness.",
+  "text.autoconfig.aun.option.netherCalc": "/nethercalc Command",
+  "text.autoconfig.aun.option.netherCalc.@Tooltip": "Type /nethercalc in chat to calculate the matching Nether or Overworld portal coordinates rounded to 0.5.",
 
   "key.aun.fullbright": "Toggle Fullbright",
   "key.category.aun.main": "A-U-N",
@@ -59,14 +61,23 @@
   "text.autoconfig.aun.option.anvilNoTooExpensive.@Tooltip": "Removes the 40-level limit of the anvil.",
   "text.autoconfig.aun.option.playerDropsNeverDespawn": "Player Drops Never Despawn",
   "text.autoconfig.aun.option.playerDropsNeverDespawn.@Tooltip": "Items you drop (or your items when you die) do not disappear after 5 minutes, but they are removed when you leave the world. Other items still despawn normally.",
+  "text.autoconfig.aun.option.stackingXp": "Stacking XP Orbs",
+  "text.autoconfig.aun.option.stackingXp.@Tooltip": "Merges nearby XP orbs into larger single orbs to improve performance.",
+  "text.autoconfig.aun.option.infiniteVillagerTrading": "Infinite Villager Trading",
+  "text.autoconfig.aun.option.infiniteVillagerTrading.@Tooltip": "Villager trades never lock out or go out of stock.",
+  "text.autoconfig.aun.option.noZombieDoorBreak": "Zombies Don't Break Doors",
+  "text.autoconfig.aun.option.noZombieDoorBreak.@Tooltip": "Prevents zombies from breaking down doors.",
+  "text.autoconfig.aun.option.enchantThroughFoliage": "Enchant Through Foliage",
+  "text.autoconfig.aun.option.enchantThroughFoliage.@Tooltip": "Leaves, flowers, vines, grass and lichen between bookshelves and the enchanting table no longer block enchanting levels.",
 
   "text.autoconfig.aun.option.piglinPortalFix": "Piglin Portal Fix",
   "text.autoconfig.aun.option.piglinPortalFix.@Tooltip": "Nether portals no longer spawn zombified piglins.",
   "text.autoconfig.aun.option.safeRedstone": "Safe Redstone",
   "text.autoconfig.aun.option.safeRedstone.@Tooltip": "Water cannot wash away redstone wire, torches, repeaters or comparators; it flows around them.",
-
   "text.autoconfig.aun.option.enderPearlFix": "Ender Pearl Fix",
   "text.autoconfig.aun.option.enderPearlFix.@Tooltip": "Fixes MC-306936: ender pearls that were removed no longer come back when you log in.",
+  "text.autoconfig.aun.option.noAnimalTemptDelay": "No Animal Tempt Delay",
+  "text.autoconfig.aun.option.noAnimalTemptDelay.@Tooltip": "Animals immediately follow you again when switching back to their breeding item without the 5-second delay.",
 
   "gamerule.aun.macenerfdmgplayer": "Mace nerf (player vs player)",
   "gamerule.aun.macenerfdmgplayer.description": "A mace smash from a player always deals exactly 1 HP to another player."
