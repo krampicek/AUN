@@ -25,12 +25,18 @@
     "FarmBlockMixin",
     "EntityMixin",
     "LevelMixin",
-    "ProjectileMixin"
+    "ProjectileMixin",
+    "BlockItemMixin",
+    "GameModeLockMixin",
+    "AbstractContainerMenuMixin"
   ],
   "client": [
     "AnvilScreenMixin",
     "BookViewScreenMixin",
-    "BookEditScreenMixin"
+    "BookEditScreenMixin",
+    "GuiMixin",
+    "GameRendererMixin",
+    "MinecraftMixin"
   ],
   "injectors": {
     "defaultRequire": 0
