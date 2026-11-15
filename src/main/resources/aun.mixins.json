@@ -32,13 +32,16 @@
     "BundleContentsMixin",
     "PackCompatibilityMixin",
     "LevelStorageAccessMixin",
-    "ItemEnchantmentsMixin"
+    "ItemEnchantmentsMixin",
+    "MinecraftServerMixin",
+    "LightEngineMixin"
   ],
   "client": [
     "AnvilScreenMixin",
     "BookViewScreenMixin",
     "BookEditScreenMixin",
     "GuiMixin",
+    "GuiGraphicsExtractorMixin",
     "GameRendererMixin",
     "MinecraftMixin",
     "ClientBundleTooltipMixin",
@@ -46,7 +49,10 @@
     "CameraMixin",
     "ChatComponentMixin",
     "LivingEntityClientMixin",
-    "ClientLevelMixin"
+    "ClientLevelMixin",
+    "ScreenMixin",
+    "LoadingOverlayMixin",
+    "LanguageSelectScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0
