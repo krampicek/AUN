@@ -38,36 +38,27 @@ public final class FullbrightHandler {
                 Method method = Class.forName(candidate[0]).getMethod(candidate[1], KeyMapping.class);
                 method.invoke(null, key);
                 return;
-            } catch (ReflectiveOperationException ignored) {
-            }
+            } catch (ReflectiveOperationException ignored) {}
         }
     }
 
     private static void tick(Minecraft client) {
-        if (client.player == null || client.level == null) {
-            return;
-        }
+        if (client.player == null || client.level == null) return;
         boolean allowed = AunConfigManager.get().fullbright;
 
         while (toggleKey.consumeClick()) {
-            if (allowed) {
-                enabled = !enabled;
-            }
+            if (allowed) enabled = !enabled;
         }
 
         if (AunClientFeatures.currentScreen == null) {
             boolean customDown = AunClientFeatures.isConfigKeyDown(client, AunConfigManager.get().fullbrightKey);
-            if (customDown && !wasCustomKeyDown && allowed) {
-                enabled = !enabled;
-            }
+            if (customDown && !wasCustomKeyDown && allowed) enabled = !enabled;
             wasCustomKeyDown = customDown;
         } else {
             wasCustomKeyDown = false;
         }
 
-        if (!allowed) {
-            enabled = true;
-        }
+        if (!allowed) enabled = true;
 
         var nv = client.player.getEffect(MobEffects.NIGHT_VISION);
         if (nv != null && nv.isInfiniteDuration() && !nv.isVisible()) {
@@ -78,9 +69,6 @@ public final class FullbrightHandler {
         if (activeNow != lastActiveState) {
             lastActiveState = activeNow;
             AunClientFeatures.refreshPlayerLightArea(client);
-            if (client.levelRenderer != null) {
-                client.levelRenderer.allChanged();
-            }
         }
     }
 
@@ -88,3 +76,4 @@ public final class FullbrightHandler {
         return AunConfigManager.get().fullbright && enabled;
     }
 }
+// END OF FILE
