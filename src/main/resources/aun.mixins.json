@@ -24,7 +24,6 @@
     "EnchantingTableBlockMixin",
     "FarmBlockMixin",
     "EntityMixin",
-    "AbstractMinecartMixin",
     "LevelMixin",
     "ProjectileMixin",
     "BlockItemMixin",
@@ -54,14 +53,10 @@
     "LivingEntityClientMixin",
     "ClientLevelMixin",
     "ScreenMixin",
+    "KeyboardHandlerMixin",
     "LoadingOverlayMixin",
     "LanguageSelectScreenMixin",
-    "LocatorBarMixin",
-    "LightTextureMixin",
-    "OptionInstanceMixin",
-    "KeyboardHandlerMixin",
-    "ParticleEngineMixin",
-    "IntegratedServerMixin"
+    "LocatorBarMixin"
   ],
   "injectors": {
     "defaultRequire": 0
