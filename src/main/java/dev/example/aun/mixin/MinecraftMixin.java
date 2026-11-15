@@ -1,9 +1,8 @@
 package dev.example.aun.mixin;
 
-import dev.example.aun.config.AunConfigManager;
+import dev.example.aun.client.AunClientFeatures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.item.BlockItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,13 +17,9 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "tick", at = @At("HEAD"), require = 0)
     private void aun$accurateBlockPlacement(CallbackInfo ci) {
-        if (!AunConfigManager.get().accurateBlockPlacement || this.player == null) {
-            return;
-        }
-        boolean holdingBlock = this.player.getMainHandItem().getItem() instanceof BlockItem
-                || this.player.getOffhandItem().getItem() instanceof BlockItem;
-        if (holdingBlock && this.rightClickDelay > 1) {
-            this.rightClickDelay = 1;
+        Minecraft self = (Minecraft) (Object) this;
+        if (this.rightClickDelay > 0 && AunClientFeatures.shouldAllowAccurateFastPlace(self)) {
+            this.rightClickDelay = 0;
         }
     }
 }
