@@ -16,7 +16,8 @@ import java.lang.reflect.Method;
 
 /**
  * Client-side keybinds and state for Zoom (BG), Better F1 (AC),
- * Disable Narrator (J), Disable Advancements Keybind (K), and Facing Placement (A).
+ * Disable Narrator (J), Disable Advancements Keybind (K), Facing Placement (A),
+ * Borderless Fullscreen (AU), and Hide Own Particles (AE).
  */
 public final class AunClientFeatures {
 
@@ -32,6 +33,9 @@ public final class AunClientFeatures {
     /** Better F1 state: 0 = normal, 1 = hide HUD only (hand visible), 2 = hide HUD + hand. */
     private static int f1State = 0;
     private static boolean wasF1Down = false;
+
+    /** True while LocalPlayer is ticking its own status effect particles. */
+    public static boolean inLocalPlayerTickEffects = false;
 
     private AunClientFeatures() {}
 
@@ -105,6 +109,11 @@ public final class AunClientFeatures {
             client.options.narrator().set(NarratorStatus.OFF);
         }
 
+        // AU: Borderless fullscreen option sync
+        if (cfg.borderlessFullscreen && Boolean.TRUE.equals(client.options.exclusiveFullscreen().get())) {
+            client.options.exclusiveFullscreen().set(false);
+        }
+
         // AC: Better F1 (3-state cycle: Normal -> Hide HUD only -> Hide HUD & Hand -> Normal)
         KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
         if (toggleGuiKey != null) {
@@ -113,15 +122,12 @@ public final class AunClientFeatures {
                 if (down && !wasF1Down) {
                     if (f1State == 0) {
                         f1State = 1;
-                        // Swallow the first F1 press so vanilla keeps the hand visible while we hide the HUD
                         while (toggleGuiKey.consumeClick()) {
-                            // swallowed
+                            // swallowed so hand stays visible
                         }
                     } else if (f1State == 1) {
-                        // Let vanilla process this F1 press so it hides both HUD and hand
                         f1State = 2;
                     } else {
-                        // Let vanilla process this F1 press so it restores both HUD and hand
                         f1State = 0;
                     }
                 }
@@ -162,5 +168,21 @@ public final class AunClientFeatures {
 
     public static int getPlaceFacingMode() {
         return placeFacingMode;
+    }
+
+    public static boolean shouldCancelOwnEffectParticle() {
+        if (!inLocalPlayerTickEffects) {
+            return false;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.options == null) {
+            return false;
+        }
+        AunConfig cfg = AunConfigManager.get();
+        if (client.options.getCameraType().isFirstPerson()) {
+            return cfg.hideOwnParticlesFirstPerson;
+        } else {
+            return cfg.hideOwnParticlesThirdPerson;
+        }
     }
 }
