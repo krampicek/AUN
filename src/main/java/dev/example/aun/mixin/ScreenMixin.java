@@ -48,11 +48,11 @@ public abstract class ScreenMixin {
     )
     private void aun$onScreenInitLifecycle(CallbackInfo ci) {
         Object self = this;
+        AunClientFeatures.currentScreen = (Screen) self;
         this.aun$chestSearchBtn = null;
         this.aun$recipeOriginBtn = null;
         AunWorldFavorites.resetChestSearch();
 
-        // BB: Eye toggle button in player InventoryScreen
         if (self instanceof InventoryScreen invScreen) {
             if (AunConfigManager.get().hideArmor) {
                 int leftPos = AunWorldFavorites.getContainerLeftPos(invScreen);
@@ -69,7 +69,6 @@ public abstract class ScreenMixin {
             return;
         }
 
-        // Permanent Horse Info inside HorseInventoryScreen while riding a horse/donkey/mule
         if (AunConfigManager.get().horseInfo && AunWorldFavorites.isHorseInventoryScreen((Screen) self)) {
             AbstractContainerScreen<?> horseScreen = (AbstractContainerScreen<?>) self;
             int leftPos = AunWorldFavorites.getContainerLeftPos(horseScreen);
@@ -81,7 +80,6 @@ public abstract class ScreenMixin {
             return;
         }
 
-        // AQ: Search bar in Chests, Shulker Boxes, Barrels, and Ender Chests
         if (self instanceof AbstractContainerScreen<?> containerScreen
                 && !(self instanceof CreativeModeInventoryScreen)
                 && AunConfigManager.get().chestSearchBar
@@ -100,7 +98,6 @@ public abstract class ScreenMixin {
             return;
         }
 
-        // AR: Favourite World button in SelectWorldScreen
         if (self.getClass().getSimpleName().equals("SelectWorldScreen")
                 && AunConfigManager.get().favouriteWorlds) {
             int btnX = this.width / 2 + 104;
@@ -119,6 +116,9 @@ public abstract class ScreenMixin {
 
     @Inject(method = "removed()V", at = @At("HEAD"), require = 0)
     private void aun$onScreenRemoved(CallbackInfo ci) {
+        if (AunClientFeatures.currentScreen == (Object) this) {
+            AunClientFeatures.currentScreen = null;
+        }
         AunWorldFavorites.resetChestSearch();
     }
 
@@ -194,14 +194,13 @@ public abstract class ScreenMixin {
             }
         }
 
-        // BF: Sprint/Ctrl + Drop (Q) drops all stacks of the hovered item
         if (self instanceof AbstractContainerScreen<?> containerScreen
                 && AunConfigManager.get().ctrlDropAllSameItems
                 && mc != null
                 && mc.options != null
                 && mc.options.keyDrop.matches(event)) {
             boolean sprintOrCtrlHeld = event.hasControlDown()
-                    || InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL)
+                    || InputConstants.isKeyDown(InputConstants.KEY_LCONTROL)
                     || mc.options.keySprint.isDown();
             if (sprintOrCtrlHeld && AunWorldFavorites.handleSprintDropAllInContainer(containerScreen)) {
                 return true;
@@ -232,3 +231,4 @@ public abstract class ScreenMixin {
         return Component.literal(AunClientFeatures.isArmorVisualHidden() ? "§8👁" : "§a👁");
     }
 }
+// END OF FILE
