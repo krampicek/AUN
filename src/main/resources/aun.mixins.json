@@ -21,7 +21,11 @@
     "MerchantOfferMixin",
     "BreakDoorGoalMixin",
     "TemptGoalMixin",
-    "EnchantingTableBlockMixin"
+    "EnchantingTableBlockMixin",
+    "FarmBlockMixin",
+    "EntityMixin",
+    "LevelMixin",
+    "ProjectileMixin"
   ],
   "client": [
     "AnvilScreenMixin",
