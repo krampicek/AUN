@@ -30,6 +30,7 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean netherCalc = true;
 
     // --------------------------- Vanilla+ ----------------------------
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean antiEndermanPickup = true;
@@ -43,9 +44,14 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noBatSpawning = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean anvilNoTooExpensive = true;
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean playerDropsNeverDespawn = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean stackingXp = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean infiniteVillagerTrading = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean noZombieDoorBreak = true;
+    @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
 
     // ------------------------------ Fixes ----------------------------
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean piglinPortalFix = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean safeRedstone = true;
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean enderPearlFix = true;
+    @ConfigEntry.Category("fixes") @ConfigEntry.Gui.Tooltip public boolean noAnimalTemptDelay = true;
 }
