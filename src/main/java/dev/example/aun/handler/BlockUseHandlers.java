@@ -7,9 +7,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -31,7 +31,7 @@ public final class BlockUseHandlers {
             BlockState state = level.getBlockState(pos);
 
             if (cfg.noAccidentalLogStripping
-                    && player.getMainHandItem().getItem() instanceof AxeItem
+                    && player.getMainHandItem().is(ItemTags.AXES)
                     && isUnstrippedWoodOrBamboo(state)) {
                 return InteractionResult.FAIL;
             }
