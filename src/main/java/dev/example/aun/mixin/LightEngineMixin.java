@@ -1,7 +1,6 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
-import dev.example.aun.client.FullbrightHandler;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.lighting.LightEngine;
@@ -14,21 +13,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class LightEngineMixin {
 
     @Inject(method = "getLightValue", at = @At("RETURN"), cancellable = true, require = 0)
-    private void aun$applyFullbrightAndDynamicLight(BlockPos pos, CallbackInfoReturnable<Integer> cir) {
-        if (FullbrightHandler.isFullbrightActive()) {
-            cir.setReturnValue(15);
-            return;
-        }
-        if (!AunConfigManager.get().dynamicLights) {
-            return;
-        }
+    private void aun$applyDynamicLight(BlockPos pos, CallbackInfoReturnable<Integer> cir) {
+        if (!AunConfigManager.get().dynamicLights) return;
         int vanilla = cir.getReturnValue();
-        if (vanilla >= 15) {
-            return;
-        }
+        if (vanilla >= 15) return;
         int dynamic = AunClientFeatures.computeDynamicLightAt(pos);
         if (dynamic > vanilla) {
             cir.setReturnValue(dynamic);
         }
     }
 }
+// END OF FILE
