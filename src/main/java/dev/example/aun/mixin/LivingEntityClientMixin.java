@@ -4,6 +4,7 @@ import dev.example.aun.client.AunClientFeatures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,12 +39,8 @@ public abstract class LivingEntityClientMixin {
     }
 
     @Inject(method = "getItemBySlot", at = @At("RETURN"), cancellable = true, require = 0)
-    private void aun$hideVisualArmorOnLocalPlayer(EquipmentSlot slot, CallbackInfoReturnable<ItemStack> cir) {
-        if (!AunClientFeatures.shouldHideLocalPlayerArmorNow()) {
-            return;
-        }
-        Minecraft client = Minecraft.getInstance();
-        if (client == null || (Object) this != client.player) {
+    private void aun$hideVisualArmorOnPlayers(EquipmentSlot slot, CallbackInfoReturnable<ItemStack> cir) {
+        if (!((Object) this instanceof Player player) || !AunClientFeatures.shouldHidePlayerArmorNow(player)) {
             return;
         }
         if (slot != EquipmentSlot.HEAD
@@ -66,3 +63,4 @@ public abstract class LivingEntityClientMixin {
         }
     }
 }
+// END OF FILE
