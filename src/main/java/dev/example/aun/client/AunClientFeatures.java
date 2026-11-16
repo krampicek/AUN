@@ -41,8 +41,9 @@ public final class AunClientFeatures {
     private static Boolean lastNetherCalcState = null;
     private static BlockPos lastAccuratePlaceTarget = null, lastLightBlockPos = null;
     private static Method setSectionDirtyMethod = null;
+    private static Field hideGuiField = null;
+    private static boolean searchedHideGuiField = false;
 
-    // Smooth Scrollable Zoom State
     private static float targetZoomMultiplier = 0.25F;
     private static float currentZoomMultiplier = 1.0F;
     private static long lastZoomFrameTimeNs = 0L;
@@ -126,6 +127,23 @@ public final class AunClientFeatures {
         return cachedToggleGuiKey;
     }
 
+    public static void enforceBetterF1HideGui(Options options) {
+        if (options == null || !AunConfigManager.get().playerHud.betterF1) return;
+        if (!searchedHideGuiField) {
+            searchedHideGuiField = true;
+            for (Field f : Options.class.getDeclaredFields()) {
+                if (f.getType() == boolean.class && f.getName().toLowerCase(Locale.ROOT).contains("hidegui")) {
+                    f.setAccessible(true);
+                    hideGuiField = f;
+                    break;
+                }
+            }
+        }
+        if (hideGuiField != null) {
+            try { hideGuiField.setBoolean(options, f1State == 2); } catch (ReflectiveOperationException ignored) {}
+        }
+    }
+
     private static Field getInventorySelectedField() {
         if (!searchedSelectedSlotField) {
             searchedSelectedSlotField = true;
@@ -142,6 +160,7 @@ public final class AunClientFeatures {
 
     public static void updateZoomFrameAndScrollLock() {
         Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.options != null) enforceBetterF1HideGui(mc.options);
         boolean zoomingNow = isZooming();
         if (mc != null && mc.player != null) {
             Field selField = getInventorySelectedField();
@@ -156,7 +175,6 @@ public final class AunClientFeatures {
                             if (diff > 4) diff -= 9;
                             else if (diff < -4) diff += 9;
                             selField.setInt(mc.player.getInventory(), lockedHotbarSlot);
-                            // Scroll up (diff < 0) zooms in closer; scroll down zooms out
                             if (diff < 0) targetZoomMultiplier = Math.max(0.04F, targetZoomMultiplier * 0.82F);
                             else targetZoomMultiplier = Math.min(0.85F, targetZoomMultiplier * 1.22F);
                         }
@@ -174,11 +192,8 @@ public final class AunClientFeatures {
         float dt = lastZoomFrameTimeNs == 0L ? 0.016F : Math.min(0.1F, (now - lastZoomFrameTimeNs) / 1_000_000_000.0F);
         lastZoomFrameTimeNs = now;
         float goal = zoomingNow ? targetZoomMultiplier : 1.0F;
-        float speed = 14.0F * dt;
-        currentZoomMultiplier = Mth.lerp(Math.min(1.0F, speed), currentZoomMultiplier, goal);
-        if (Math.abs(currentZoomMultiplier - goal) < 0.002F) {
-            currentZoomMultiplier = goal;
-        }
+        currentZoomMultiplier = Mth.lerp(Math.min(1.0F, 14.0F * dt), currentZoomMultiplier, goal);
+        if (Math.abs(currentZoomMultiplier - goal) < 0.002F) currentZoomMultiplier = goal;
     }
 
     public static float getSmoothZoomMultiplier() {
@@ -204,12 +219,12 @@ public final class AunClientFeatures {
             boolean down = toggleGuiKey != null ? isKeyMappingPhysicallyDown(toggleGuiKey) : InputConstants.isKeyDown(InputConstants.KEY_F1);
             if (cfg.playerHud.betterF1) {
                 if (down && !wasF1Down) {
-                    if (f1State == 0) {
-                        f1State = 1;
-                        if (toggleGuiKey != null) while (toggleGuiKey.consumeClick()) {}
-                    } else f1State = (f1State == 1) ? 2 : 0;
+                    f1State = (f1State + 1) % 3;
                 }
-            } else f1State = 0;
+                enforceBetterF1HideGui(client.options);
+            } else {
+                f1State = 0;
+            }
             wasF1Down = down;
         }
     }
@@ -217,6 +232,8 @@ public final class AunClientFeatures {
     private static void onEndTick(Minecraft client) {
         if (client.options == null) return;
         AunConfig cfg = AunConfigManager.get();
+        enforceBetterF1HideGui(client.options);
+
         if (client.options.keyUse.isDown()) useKeyHeldTicks++;
         else { useKeyHeldTicks = 0; lastAccuratePlaceTarget = null; }
 
@@ -235,10 +252,11 @@ public final class AunClientFeatures {
             int curLight = cfg.remainingHuds.dynamicLights ? getHeldLightLevel(client.player) : 0;
             BlockPos curPos = client.player.blockPosition();
             if (curLight != lastHeldLightLevel || (curLight > 0 && !curPos.equals(lastLightBlockPos))) {
-                if (lastLightBlockPos != null) markLightAreaDirty(client, lastLightBlockPos);
-                markLightAreaDirty(client, curPos);
+                BlockPos old = lastLightBlockPos;
                 lastLightBlockPos = curPos.immutable();
                 lastHeldLightLevel = curLight;
+                if (old != null) markLightAreaDirty(client, old);
+                markLightAreaDirty(client, curPos);
             }
         }
     }
@@ -268,7 +286,10 @@ public final class AunClientFeatures {
 
     private static void markLightAreaDirty(Minecraft c, BlockPos center) {
         if (c.level == null || c.levelRenderer == null) return;
-        c.level.getLightEngine().checkBlock(center);
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dy = -2; dy <= 2; dy++)
+                for (int dz = -2; dz <= 2; dz++)
+                    c.level.getLightEngine().checkBlock(center.offset(dx, dy, dz));
         if (!searchedSectionDirtyMethod) {
             searchedSectionDirtyMethod = true;
             try { setSectionDirtyMethod = c.levelRenderer.getClass().getDeclaredMethod("setSectionDirty", int.class, int.class, int.class); setSectionDirtyMethod.setAccessible(true); }
