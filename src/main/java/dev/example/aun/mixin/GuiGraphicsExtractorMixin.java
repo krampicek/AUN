@@ -18,7 +18,7 @@ public abstract class GuiGraphicsExtractorMixin {
 
     @Inject(method = "guiHeight", at = @At("RETURN"), cancellable = true, require = 0)
     private void aun$raiseHotbarToBedrockHeight(CallbackInfoReturnable<Integer> cir) {
-        if (AunClientFeatures.inGuiHudRender && AunConfigManager.get().hud.raisedHotbar) {
+        if (AunClientFeatures.inGuiHudRender && AunConfigManager.get().playerHud.raisedHotbar) {
             cir.setReturnValue(cir.getReturnValue() - 6);
         }
     }
@@ -47,7 +47,7 @@ public abstract class GuiGraphicsExtractorMixin {
         at = @At("HEAD"),
         require = 0
     )
-    private void aun$drawChatHeadAndHorseStats(
+    private void aun$drawChatHeadHighlightAndHorseStats(
             Font font,
             net.minecraft.util.FormattedCharSequence seq,
             int x,
@@ -56,11 +56,14 @@ public abstract class GuiGraphicsExtractorMixin {
             boolean dropShadow,
             CallbackInfo ci) {
         GuiGraphicsExtractor self = (GuiGraphicsExtractor) (Object) this;
-        if (AunConfigManager.get().hud.chatHeads && seq != null) {
+        if (seq != null) {
             StringBuilder sb = new StringBuilder();
             seq.accept((idx, style, cp) -> { sb.appendCodePoint(cp); return true; });
             String plain = sb.toString();
-            if (plain.startsWith("   ")) {
+
+            AunWorldFavorites.onChatLineRendered(self, font, plain, x, y);
+
+            if (AunConfigManager.get().playerHud.chatHeads && (plain.startsWith("   ") || plain.startsWith("<"))) {
                 java.util.UUID uuid = AunWorldFavorites.findSenderUuidForChatLine(plain);
                 if (uuid != null) {
                     AunWorldFavorites.drawPlayerHead8x8(self, uuid, x, y);
