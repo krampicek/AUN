@@ -15,8 +15,22 @@ public class AunConfig implements ConfigData {
         OWN_PROFILE
     }
 
+    public enum LinkAction {
+        LINK,
+        OPEN_LINK;
+        @Override public String toString() { return "LINK"; }
+    }
+
     public enum ExportAction {
-        EXPORT
+        EXPORT,
+        OPEN_EXPORT;
+        @Override public String toString() { return "EXPORT"; }
+    }
+
+    public enum LanguageAction {
+        LANGUAGE,
+        OPEN_LANGUAGE;
+        @Override public String toString() { return "LANGUAGE"; }
     }
 
     // ============================== GENERAL TAB ==============================
@@ -32,10 +46,20 @@ public class AunConfig implements ConfigData {
     public static class ProfileSubConfig {
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ProfileMode profileMode = ProfileMode.DEFAULT;
-        @ConfigEntry.Gui.Tooltip public String customProfilePath = "default_profile.json";
+        @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+        public LinkAction loadableProfile = LinkAction.LINK;
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ExportAction exportOwnProfile = ExportAction.EXPORT;
+        @ConfigEntry.Gui.Excluded public String customProfilePath = "default_profile.json";
     }
+
+    @ConfigEntry.Category("general")
+    @ConfigEntry.Gui.Tooltip
+    @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+    public LanguageAction languageMenu = LanguageAction.LANGUAGE;
+
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded
+    public String selectedLanguage = "en_us";
 
     // ============================== QOL TAB ==============================
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
@@ -224,6 +248,11 @@ public class AunConfig implements ConfigData {
 
     public void syncMirrors() {
         if (general != null) { modEnabled = general.modEnabled; }
+        if (profile != null) {
+            profile.loadableProfile = LinkAction.LINK;
+            profile.exportOwnProfile = ExportAction.EXPORT;
+        }
+        languageMenu = LanguageAction.LANGUAGE;
         if (clearVision != null) { clearWater = clearVision.clearWater; clearLava = clearVision.clearLava; clearPowderSnow = clearVision.clearPowderSnow; }
         if (worldSettings != null) { favouriteWorlds = worldSettings.favouriteWorlds; worldPlaytimeDisplay = worldSettings.worldPlaytimeDisplay; deletedWorldProtection = worldSettings.deletedWorldProtection; }
         if (entities != null) { reachBehind = entities.reachBehind; reachBehindSign = entities.reachBehindSign; armorStandSwap = entities.armorStandSwap; horseInfo = false; dismountOnClick = entities.dismountOnClick; }
