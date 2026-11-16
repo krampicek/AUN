@@ -8,6 +8,8 @@ import dev.example.aun.config.AunConfigManager;
 import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -44,15 +47,58 @@ public class AunConfigScreen extends Screen {
     private static Button ourBrowseButton = null;
     private static Button ourSaveAndQuitButton = null;
     private static Button ourSaveButton = null;
-
-    private static Field buttonOnPressField = null;
-    private static boolean searchedOnPressField = false;
+    private static String lastAppliedLangCode = null;
 
     private final Screen parent;
 
     public AunConfigScreen(Screen parent) {
         super(Component.literal("A-U-N Settings"));
         this.parent = parent;
+    }
+
+    public static boolean isCzechSelected() {
+        AunConfig cfg = AunConfigManager.getRealConfig();
+        return cfg.selectedLanguage != null && cfg.selectedLanguage.equalsIgnoreCase("cs_cz");
+    }
+
+    public static void drawCenteredTitle(GuiGraphicsExtractor graphics, Font font, String text, int x, int y) {
+        try {
+            Method m = graphics.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class);
+            m.invoke(graphics, font, text, x, y, 0xFFFFFFFF, true);
+        } catch (Throwable ignored) {}
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void applyModLanguage(String langCode) {
+        String code = (langCode == null || langCode.isBlank()) ? "en_us" : langCode.trim().toLowerCase(Locale.ROOT);
+        try (InputStream in = AunConfigScreen.class.getResourceAsStream("/assets/aun/lang/" + code + ".json")) {
+            if (in == null) return;
+            Map<String, String> parsed = GSON.fromJson(
+                    new InputStreamReader(in, StandardCharsets.UTF_8),
+                    new TypeToken>() {}.getType()
+            );
+            if (parsed == null || parsed.isEmpty()) return;
+
+            Language langInstance = Language.getInstance();
+            if (langInstance == null) return;
+            Class<?> cls = langInstance.getClass();
+            while (cls != null && cls != Object.class) {
+                for (Field f : cls.getDeclaredFields()) {
+                    if (Map.class.isAssignableFrom(f.getType()) && !Modifier.isStatic(f.getModifiers())) {
+                        f.setAccessible(true);
+                        Object cur = f.get(langInstance);
+                        if (cur instanceof Map<?, ?> map) {
+                            Map<String, String> mutable = new HashMap<>((Map<String, String>) map);
+                            mutable.putAll(parsed);
+                            f.set(langInstance, mutable);
+                            lastAppliedLangCode = code;
+                            return;
+                        }
+                    }
+                }
+                cls = cls.getSuperclass();
+            }
+        } catch (Throwable ignored) {}
     }
 
     public static Path getProfilesBaseDir() {
@@ -93,8 +139,13 @@ public class AunConfigScreen extends Screen {
     public static Screen create(Screen parent) {
         AunConfigManager.ensureProfileFoldersExist();
         AunConfig real = AunConfigManager.getRealConfig();
-        real.syncMirrors();
+        if (real.profile != null) {
+            real.profile.linkProfile = AunConfig.LinkAction.LINK;
+            real.profile.exportOwnProfile = AunConfig.ExportAction.EXPORT;
+        }
+        real.languageWindow = AunConfig.LanguageAction.LANGUAGE;
         applyModLanguage(real.selectedLanguage);
+
         initialProfileModeOnOpen = real.profile != null ? real.profile.profileMode : AunConfig.ProfileMode.DEFAULT;
 
         String[] classes = {
@@ -123,113 +174,85 @@ public class AunConfigScreen extends Screen {
         ourSaveButton = saveBtn;
     }
 
-    public static void onButtonBuilt(Button btn) {
-        if (btn == null) return;
-        if (!searchedOnPressField) {
-            searchedOnPressField = true;
-            for (Field f : Button.class.getDeclaredFields()) {
-                if (Button.OnPress.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    buttonOnPressField = f;
-                    break;
-                }
-            }
-        }
-        if (buttonOnPressField != null) {
-            try {
-                Button.OnPress original = (Button.OnPress) buttonOnPressField.get(btn);
-                Button.OnPress wrapped = clicked -> {
-                    if (interceptClothButtonClick(clicked)) {
-                        return;
-                    }
-                    if (original != null) {
-                        original.onPress(clicked);
-                    }
-                };
-                buttonOnPressField.set(btn, wrapped);
-            } catch (Throwable ignored) {}
-        }
-    }
-
-    public static boolean interceptClothButtonClick(Button clicked) {
-        Screen cur = AunClientFeatures.currentScreen;
-        if (!isClothConfigScreen(cur) || clicked == null) return false;
-        String text = clicked.getMessage().getString().trim();
-        if (text.equals("LINK") || text.equals("OPEN_LINK")) {
-            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LoadProfileScreen(cur));
-            return true;
-        }
-        if (text.equals("EXPORT") || text.equals("OPEN_EXPORT")) {
-            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(cur));
-            return true;
-        }
-        if (text.equals("LANGUAGE") || text.equals("OPEN_LANGUAGE")) {
-            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LanguageScreen(cur));
-            return true;
-        }
-        return false;
-    }
-
     public static void tickClothConfigScreen(Screen screen) {
         if (!isClothConfigScreen(screen)) return;
+
+        AunConfig realCfg = AunConfigManager.getRealConfig();
+        if (realCfg.selectedLanguage != null && !realCfg.selectedLanguage.equalsIgnoreCase(lastAppliedLangCode)) {
+            applyModLanguage(realCfg.selectedLanguage);
+        }
+
         layoutBottomBarButtons(screen);
 
+        // Scan Cloth Config entries for LINK, EXPORT, or LANGUAGE button clicks
         AbstractSelectionList<?> listWidget = findListWidget(screen);
-        if (listWidget == null) return;
-
-        Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-        inspectEntriesRecursive(screen, listWidget.children(), visited, 0);
+        if (listWidget != null) {
+            Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+            checkEntriesForSubWindowOpen(screen, listWidget.children(), visited, 0);
+        }
     }
 
-    private static void inspectEntriesRecursive(Screen screen, Object node, Set<Object> visited, int depth) {
+    private static void checkEntriesForSubWindowOpen(Screen screen, Object node, Set<Object> visited, int depth) {
         if (node == null || depth > 5 || !visited.add(node)) return;
 
         if (node instanceof Collection<?> col) {
             for (Object item : col) {
-                inspectEntriesRecursive(screen, item, visited, depth + 1);
+                checkEntriesForSubWindowOpen(screen, item, visited, depth + 1);
             }
             return;
         }
 
-        // Check if this is a Cloth Config entry whose enum value was just clicked
-        try {
-            Method getVal = node.getClass().getMethod("getValue");
-            Object val = getVal.invoke(node);
-            if (val == AunConfig.LinkAction.OPEN_LINK) {
-                resetEnumEntryIndex(node);
-                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LoadProfileScreen(screen));
-                return;
-            } else if (val == AunConfig.ExportAction.OPEN_EXPORT) {
-                resetEnumEntryIndex(node);
-                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(screen));
-                return;
-            } else if (val == AunConfig.LanguageAction.OPEN_LANGUAGE) {
-                resetEnumEntryIndex(node);
-                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LanguageScreen(screen));
-                return;
-            }
-            if (val instanceof AunConfig.LinkAction
-                    || val instanceof AunConfig.ExportAction
-                    || val instanceof AunConfig.LanguageAction) {
-                hideResetButtonInActionEntry(node);
-            }
-        } catch (Throwable ignored) {}
+        Object val = getEntryValue(node);
+        if (val == AunConfig.LinkAction.OPEN_LINK) {
+            resetSelectionEntryIndex(node);
+            invokeClothSaveAll(screen);
+            AunConfigManager.getRealConfig().profile.linkProfile = AunConfig.LinkAction.LINK;
+            Minecraft.getInstance().setScreenAndShow(new AunLoadProfileScreen(screen));
+            return;
+        }
+        if (val == AunConfig.ExportAction.OPEN_EXPORT) {
+            resetSelectionEntryIndex(node);
+            invokeClothSaveAll(screen);
+            AunConfigManager.getRealConfig().profile.exportOwnProfile = AunConfig.ExportAction.EXPORT;
+            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(screen));
+            return;
+        }
+        if (val == AunConfig.LanguageAction.OPEN_LANGUAGE) {
+            resetSelectionEntryIndex(node);
+            invokeClothSaveAll(screen);
+            AunConfigManager.getRealConfig().languageWindow = AunConfig.LanguageAction.LANGUAGE;
+            Minecraft.getInstance().setScreenAndShow(new AunLanguageScreen(screen));
+            return;
+        }
 
+        if (val instanceof Collection<?> subCol) {
+            checkEntriesForSubWindowOpen(screen, subCol, visited, depth + 1);
+        }
         if (node instanceof ContainerEventHandler ceh) {
-            for (GuiEventListener child : ceh.children()) {
-                inspectEntriesRecursive(screen, child, visited, depth + 1);
-            }
+            checkEntriesForSubWindowOpen(screen, ceh.children(), visited, depth + 1);
         }
     }
 
-    private static void resetEnumEntryIndex(Object entry) {
+    private static Object getEntryValue(Object entry) {
+        if (entry == null) return null;
+        try {
+            Method m = entry.getClass().getMethod("getValue");
+            return m.invoke(entry);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static void resetSelectionEntryIndex(Object entry) {
+        if (entry == null) return;
         Class<?> cls = entry.getClass();
         while (cls != null && cls != Object.class) {
             for (Field f : cls.getDeclaredFields()) {
-                if (f.getType() == int.class) {
+                if (AtomicInteger.class.isAssignableFrom(f.getType())) {
                     try {
                         f.setAccessible(true);
-                        f.setInt(entry, 0);
+                        AtomicInteger ai = (AtomicInteger) f.get(entry);
+                        if (ai != null) ai.set(0);
                     } catch (Throwable ignored) {}
                 }
             }
@@ -237,24 +260,10 @@ public class AunConfigScreen extends Screen {
         }
     }
 
-    private static void hideResetButtonInActionEntry(Object entry) {
-        if (entry instanceof ContainerEventHandler ceh) {
-            List<Button> btns = new ArrayList<>();
-            for (GuiEventListener child : ceh.children()) {
-                if (child instanceof Button b) btns.add(b);
-            }
-            if (btns.size() >= 2) {
-                Button resetBtn = btns.get(1);
-                resetBtn.visible = false;
-                resetBtn.active = false;
-            }
-        }
-    }
-
     public static void layoutBottomBarButtons(Screen screen) {
         int centerX = screen.width / 2;
         int bottomY = screen.height - 26;
-        boolean cz = isCzechLanguage();
+        boolean cz = isCzechSelected();
 
         if (ourBrowseButton != null) {
             ourBrowseButton.setX(centerX - 204);
@@ -296,53 +305,6 @@ public class AunConfigScreen extends Screen {
                 }
             }
         }
-    }
-
-    private static boolean isCzechLanguage() {
-        AunConfig cfg = AunConfigManager.getRealConfig();
-        return cfg.selectedLanguage != null && cfg.selectedLanguage.equalsIgnoreCase("cs_cz");
-    }
-
-    @SuppressWarnings("unchecked")
-    public static void applyModLanguage(String langCode) {
-        String code = (langCode == null || langCode.isBlank()) ? "en_us" : langCode.trim().toLowerCase(Locale.ROOT);
-        String resourcePath = "/assets/aun/lang/" + code + ".json";
-        try (InputStream in = AunConfigScreen.class.getResourceAsStream(resourcePath)) {
-            if (in == null) return;
-            Map<String, String> modTranslations = GSON.fromJson(
-                    new InputStreamReader(in, StandardCharsets.UTF_8),
-                    new TypeToken>() {}.getType());
-            if (modTranslations == null || modTranslations.isEmpty()) return;
-
-            Language currentLang = Language.getInstance();
-            Class<?> cls = currentLang.getClass();
-            while (cls != null && cls != Object.class) {
-                for (Field f : cls.getDeclaredFields()) {
-                    if (Map.class.isAssignableFrom(f.getType())) {
-                        f.setAccessible(true);
-                        Object existingObj = f.get(currentLang);
-                        if (existingObj instanceof Map<?, ?> existingMap) {
-                            Map<String, String> merged = new HashMap<>((Map<String, String>) existingMap);
-                            merged.putAll(modTranslations);
-                            f.set(currentLang, merged);
-                            return;
-                        }
-                    }
-                }
-                cls = cls.getSuperclass();
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    public static void applySelectedLanguageAndReopen(String langCode, Screen clothScreen) {
-        AunConfig cfg = AunConfigManager.getRealConfig();
-        cfg.selectedLanguage = (langCode == null || langCode.isBlank()) ? "en_us" : langCode;
-        cfg.syncMirrors();
-        try {
-            AutoConfig.getConfigHolder(AunConfig.class).save();
-        } catch (Throwable ignored) {}
-        applyModLanguage(cfg.selectedLanguage);
-        reopenClothScreen(clothScreen);
     }
 
     private static AbstractSelectionList<?> findListWidget(Screen screen) {
@@ -486,7 +448,9 @@ public class AunConfigScreen extends Screen {
                     try {
                         AunConfig loaded = GSON.fromJson(Files.readString(candidate, StandardCharsets.UTF_8), AunConfig.class);
                         if (loaded != null) {
+                            String keepLang = cfg.selectedLanguage;
                             copyConfigValues(loaded, cfg);
+                            cfg.selectedLanguage = keepLang;
                             cfg.profile.customProfilePath = name;
                             cfg.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
                         }
@@ -523,11 +487,9 @@ public class AunConfigScreen extends Screen {
                     current.syncMirrors();
                     AutoConfig.getConfigHolder(AunConfig.class).save();
                     reopenClothScreen(currentScreen);
-                    return;
                 }
             }
         } catch (Throwable ignored) {}
-        Minecraft.getInstance().setScreenAndShow(currentScreen);
     }
 
     private static Screen findParentScreen(Screen currentScreen) {
@@ -547,7 +509,7 @@ public class AunConfigScreen extends Screen {
         return null;
     }
 
-    private static void reopenClothScreen(Screen currentScreen) {
+    public static void reopenClothScreen(Screen currentScreen) {
         Minecraft.getInstance().setScreenAndShow(create(findParentScreen(currentScreen)));
     }
 
