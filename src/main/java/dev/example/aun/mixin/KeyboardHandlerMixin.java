@@ -1,9 +1,11 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
+import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -26,12 +28,9 @@ public abstract class KeyboardHandlerMixin {
             MouseButtonEvent event,
             boolean doubleClick,
             CallbackInfoReturnable<Boolean> cir) {
-        try {
-            var m = this.getClass().getMethod("aun$handleSubScreenMouseClick", MouseButtonEvent.class);
-            if (Boolean.TRUE.equals(m.invoke(this, event))) {
-                cir.setReturnValue(true);
-            }
-        } catch (ReflectiveOperationException ignored) {}
+        if (AunWorldFavorites.onScreenMouseClicked((Screen) (Object) this, event)) {
+            cir.setReturnValue(true);
+        }
     }
 
     @ModifyVariable(
@@ -44,7 +43,7 @@ public abstract class KeyboardHandlerMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.options != null && mc.options.keyDrop.matches(event)) {
             boolean sprintHeld = AunClientFeatures.isKeyMappingPhysicallyDown(mc.options.keySprint);
-            if (AunConfigManager.get().hud.ctrlDropAllSameItems && sprintHeld) {
+            if (AunConfigManager.get().remainingHuds.ctrlDropAllSameItems && sprintHeld) {
                 return new KeyEvent(event.key(), event.keycode(), event.modifiers() | 2);
             } else {
                 return new KeyEvent(event.key(), event.keycode(), event.modifiers() & ~2);
@@ -62,16 +61,13 @@ public abstract class KeyboardHandlerMixin {
     private void aun$onSubScreenKeyPressed(
             KeyEvent event,
             CallbackInfoReturnable<Boolean> cir) {
-        if (AunConfigManager.get().hud.disableNarrator && event.key() == 66 && event.hasControlDown()) {
+        if (AunConfigManager.get().remainingHuds.disableNarrator && event.key() == 66 && event.hasControlDown()) {
             cir.setReturnValue(true);
             return;
         }
-        try {
-            var m = this.getClass().getMethod("aun$handleSubScreenKeyPressed", KeyEvent.class);
-            if (Boolean.TRUE.equals(m.invoke(this, event))) {
-                cir.setReturnValue(true);
-            }
-        } catch (ReflectiveOperationException ignored) {}
+        if (AunWorldFavorites.onScreenKeyPressed((Screen) (Object) this, event)) {
+            cir.setReturnValue(true);
+        }
     }
 }
 // END OF FILE
