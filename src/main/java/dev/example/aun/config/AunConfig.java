@@ -16,7 +16,7 @@ public class AunConfig implements ConfigData {
     }
 
     public enum ExportAction {
-        EXPORT_PROFILE
+        EXPORT
     }
 
     // ============================== GENERAL TAB ==============================
@@ -34,7 +34,7 @@ public class AunConfig implements ConfigData {
         public ProfileMode profileMode = ProfileMode.DEFAULT;
         @ConfigEntry.Gui.Tooltip public String customProfilePath = "default_profile.json";
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-        public ExportAction exportOwnProfile = ExportAction.EXPORT_PROFILE;
+        public ExportAction exportOwnProfile = ExportAction.EXPORT;
     }
 
     // ============================== QOL TAB ==============================
