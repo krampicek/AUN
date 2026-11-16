@@ -17,23 +17,26 @@ public abstract class GameRendererMixin {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Inject(method = "get", at = @At("RETURN"), cancellable = true, require = 0)
-    private void aun$overrideGammaAndFov(CallbackInfoReturnable cir) {
+    private void aun$overrideGammaAndSmoothFov(CallbackInfoReturnable cir) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.options == null) return;
         Object self = this;
         if (self == mc.options.gamma() && FullbrightHandler.isFullbrightActive()) {
             cir.setReturnValue(16.0D);
-        } else if (self == mc.options.fov() && AunClientFeatures.isZooming()) {
-            Object val = cir.getReturnValue();
-            if (val instanceof Integer fov) {
-                cir.setReturnValue(Math.max(15, fov / 4));
+        } else if (self == mc.options.fov()) {
+            float mult = AunClientFeatures.getSmoothZoomMultiplier();
+            if (mult < 0.995F) {
+                Object val = cir.getReturnValue();
+                if (val instanceof Integer fov) {
+                    cir.setReturnValue(Math.max(5, Math.round(fov * mult)));
+                }
             }
         }
     }
 
     @Inject(method = "set", at = @At("HEAD"), cancellable = true, require = 0)
     private void aun$lockNarratorOff(Object value, CallbackInfo ci) {
-        if (!AunConfigManager.get().hud.disableNarrator) return;
+        if (!AunConfigManager.get().remainingHuds.disableNarrator) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.options != null && (Object) this == mc.options.narrator()) {
             if (value != NarratorStatus.OFF || mc.options.narrator().get() == NarratorStatus.OFF) {
