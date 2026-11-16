@@ -75,8 +75,6 @@ public final class AunWorldFavorites {
     private static final Set<UUID> HEAD_FETCH_IN_PROGRESS = ConcurrentHashMap.newKeySet();
     private static Method fillMethod = null;
     private static boolean searchedFillMethod = false;
-    private static Field mainCameraField = null;
-    private static boolean searchedCameraField = false;
 
     private AunWorldFavorites() {}
 
@@ -567,32 +565,23 @@ public final class AunWorldFavorites {
         }
     }
 
-    private static Camera getActiveCamera(Minecraft mc) {
-        if (mc == null || mc.gameRenderer == null) return null;
-        if (!searchedCameraField) {
-            searchedCameraField = true;
-            for (Field f : mc.gameRenderer.getClass().getDeclaredFields()) {
-                if (Camera.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    mainCameraField = f;
-                    break;
-                }
-            }
-        }
-        if (mainCameraField != null) {
-            try { return (Camera) mainCameraField.get(mc.gameRenderer); }
-            catch (ReflectiveOperationException ignored) {}
-        }
-        return null;
-    }
-
     public static void renderPlayerHeadsOnLocatorBar(GuiGraphicsExtractor g) {
         if (!AunConfigManager.get().playerHud.headLocator) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.level == null || mc.player == null) return;
-        Camera cam = getActiveCamera(mc);
-        Vec3 camPos = cam != null ? cam.position() : mc.player.position();
-        float camYaw = cam != null ? cam.yRot() : mc.player.getYRot();
+        if (mc == null || mc.level == null || mc.player == null || mc.gameRenderer == null) return;
+        Vec3 camPos = mc.player.position();
+        float camYaw = mc.player.getYRot();
+        try {
+            for (Field f : mc.gameRenderer.getClass().getDeclaredFields()) {
+                if (Camera.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    Camera cam = (Camera) f.get(mc.gameRenderer);
+                    if (cam != null) { camPos = cam.position(); camYaw = cam.yRot(); }
+                    break;
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {}
+
         int cx = g.guiWidth() / 2;
         int by = g.guiHeight() - 30;
         for (Player o : mc.level.players()) {
