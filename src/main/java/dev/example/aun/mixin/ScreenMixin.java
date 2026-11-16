@@ -45,7 +45,6 @@ public abstract class ScreenMixin {
         AunWorldFavorites.resetChestSearch();
 
         if (AunConfigScreen.isClothConfigScreen(self)) {
-            // Standalone Save Button (saves without quitting Cloth Config)
             this.addRenderableWidget(Button.builder(Component.literal("§6Save"), btn -> {
                 AunConfigScreen.saveWithoutClosing(self);
                 btn.setMessage(Component.literal("§aSaved!"));
@@ -54,7 +53,6 @@ public abstract class ScreenMixin {
             .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
             .build());
 
-            // Link Own Profile Button (opens desktop file browser)
             this.addRenderableWidget(Button.builder(Component.literal("§b📂 Link Profile"), btn -> {
                 AunConfigScreen.openProfileFileChooser(self, null);
             })
@@ -62,7 +60,6 @@ public abstract class ScreenMixin {
             .tooltip(Tooltip.create(Component.literal("Open desktop file browser to link your own profile (.json)")))
             .build());
 
-            // Export Own Profile Button (exports to .minecraft / Prism folder and opens Windows Explorer)
             this.addRenderableWidget(Button.builder(Component.literal("§d📤 Export"), btn -> {
                 AunConfigScreen.exportOwnProfile(self);
                 btn.setMessage(Component.literal("§aExported!"));
@@ -143,4 +140,8 @@ public abstract class ScreenMixin {
     }
 
     @Unique
-    private static Component
+    private static Component aun$getEyeLabel() {
+        return Component.literal(AunClientFeatures.isArmorVisualHidden() ? "§8👁" : "§a👁");
+    }
+}
+// END OF FILE
