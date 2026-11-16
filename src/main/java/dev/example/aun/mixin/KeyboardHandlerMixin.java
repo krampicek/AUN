@@ -1,9 +1,7 @@
 package dev.example.aun.mixin;
 
-import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -14,21 +12,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin({
-    AbstractContainerScreen.class,
-    ChatScreen.class,
-    Button.Builder.class
-})
+@Mixin({AbstractContainerScreen.class, ChatScreen.class})
 public abstract class KeyboardHandlerMixin {
-
-    @Inject(
-        method = "build()Lnet/minecraft/client/gui/components/Button;",
-        at = @At("RETURN"),
-        require = 0
-    )
-    private void aun$onButtonBuilt(CallbackInfoReturnable<Button> cir) {
-        AunConfigScreen.onButtonBuilt(cir.getReturnValue());
-    }
 
     @Inject(
         method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
@@ -40,8 +25,7 @@ public abstract class KeyboardHandlerMixin {
             MouseButtonEvent event,
             boolean doubleClick,
             CallbackInfoReturnable<Boolean> cir) {
-        if (!((Object) this instanceof Screen screen)) return;
-        if (AunWorldFavorites.onScreenMouseClicked(screen, event)) {
+        if (AunWorldFavorites.onScreenMouseClicked((Screen) (Object) this, event)) {
             cir.setReturnValue(true);
         }
     }
@@ -55,12 +39,11 @@ public abstract class KeyboardHandlerMixin {
     private void aun$onSubScreenKeyPressed(
             KeyEvent event,
             CallbackInfoReturnable<Boolean> cir) {
-        if (!((Object) this instanceof Screen screen)) return;
         if (AunConfigManager.get().remainingHuds.disableNarrator && event.key() == 66 && event.hasControlDown()) {
             cir.setReturnValue(true);
             return;
         }
-        if (AunWorldFavorites.onScreenKeyPressed(screen, event)) {
+        if (AunWorldFavorites.onScreenKeyPressed((Screen) (Object) this, event)) {
             cir.setReturnValue(true);
         }
     }
