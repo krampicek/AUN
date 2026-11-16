@@ -1,9 +1,7 @@
 package dev.example.aun.mixin;
 
-import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -12,7 +10,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin({AbstractContainerScreen.class, ChatScreen.class})
@@ -31,25 +28,6 @@ public abstract class KeyboardHandlerMixin {
         if (AunWorldFavorites.onScreenMouseClicked((Screen) (Object) this, event)) {
             cir.setReturnValue(true);
         }
-    }
-
-    @ModifyVariable(
-        method = "keyPressed(Lnet/minecraft/client/input/KeyEvent;)Z",
-        at = @At("HEAD"),
-        argsOnly = true,
-        require = 0
-    )
-    private KeyEvent aun$remapSprintDropToCtrlThrow(KeyEvent event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.options != null && mc.options.keyDrop.matches(event)) {
-            boolean sprintHeld = AunClientFeatures.isKeyMappingPhysicallyDown(mc.options.keySprint);
-            if (AunConfigManager.get().remainingHuds.ctrlDropAllSameItems && sprintHeld) {
-                return new KeyEvent(event.key(), event.keycode(), event.modifiers() | 2);
-            } else {
-                return new KeyEvent(event.key(), event.keycode(), event.modifiers() & ~2);
-            }
-        }
-        return event;
     }
 
     @Inject(
