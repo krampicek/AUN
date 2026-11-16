@@ -16,7 +16,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -25,9 +24,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
@@ -51,7 +47,6 @@ public abstract class ScreenMixin {
         if (AunConfigScreen.isClothConfigScreen(self)) {
             AunConfigManager.ensureProfileFoldersExist();
 
-            // 1. Bottom-left button: "Browse"
             Button browseBtn = Button.builder(Component.literal("Browse"), btn -> {
                 AunConfigScreen.openFolderInOS(AunConfigScreen.getProfilesBaseDir());
             })
@@ -60,7 +55,6 @@ public abstract class ScreenMixin {
             .build();
             this.addRenderableWidget(browseBtn);
 
-            // 2. Center-right button: "Save & Quit" (always bright & clickable like Save)
             Button saveQuitBtn = Button.builder(Component.literal("Save & Quit"), btn -> {
                 AunConfigScreen.saveAndClose(self);
             })
@@ -69,7 +63,6 @@ public abstract class ScreenMixin {
             .build();
             this.addRenderableWidget(saveQuitBtn);
 
-            // 3. Bottom-right button: "Save"
             Button saveBtn = Button.builder(Component.literal("Save"), btn -> {
                 AunConfigScreen.saveWithoutClosing(self);
             })
@@ -78,28 +71,7 @@ public abstract class ScreenMixin {
             .build();
             this.addRenderableWidget(saveBtn);
 
-            // 4. Selectable ▼ arrow button on the left side of the Loadable Profile black box
-            Button arrowBtn = Button.builder(Component.literal("▼"), btn -> {
-                AunConfigScreen.dropdownExpanded = !AunConfigScreen.dropdownExpanded;
-            }).bounds(0, 0, AunConfigScreen.ARROW_BTN_WIDTH, 20).build();
-            arrowBtn.visible = false;
-            arrowBtn.active = false;
-            this.addRenderableWidget(arrowBtn);
-
-            // 5. 5 scrollable dropdown item buttons (max 5 visible at once)
-            List<Button> itemBtns = new ArrayList<>();
-            for (int i = 0; i < AunConfigScreen.MAX_VISIBLE_PROFILES; i++) {
-                final int slotIdx = i;
-                Button itemBtn = Button.builder(Component.literal(""), btn -> {
-                    AunConfigScreen.selectProfileFromDropdown(self, slotIdx);
-                }).bounds(0, 0, AunConfigScreen.PROFILE_BOX_WIDTH + AunConfigScreen.ARROW_BTN_WIDTH, 18).build();
-                itemBtn.visible = false;
-                itemBtn.active = false;
-                this.addRenderableWidget(itemBtn);
-                itemBtns.add(itemBtn);
-            }
-
-            AunConfigScreen.registerClothOverlayWidgets(browseBtn, saveQuitBtn, saveBtn, arrowBtn, itemBtns);
+            AunConfigScreen.registerBottomButtons(browseBtn, saveQuitBtn, saveBtn);
             AunConfigScreen.layoutBottomBarButtons(self);
             return;
         }
@@ -150,30 +122,6 @@ public abstract class ScreenMixin {
                     "Select a world and click: 1x = Gold (Top) | 2x = Diamond (Best) | 3x = Classic")))
             .build();
             this.addRenderableWidget(favButton);
-        }
-    }
-
-    @Inject(
-        method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
-        at = @At("HEAD"),
-        cancellable = true,
-        require = 0
-    )
-    private void aun$onClothScreenMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
-        if (AunConfigScreen.handleCustomMouseClick((Screen) (Object) this, event.x(), event.y(), event.button())) {
-            cir.setReturnValue(true);
-        }
-    }
-
-    @Inject(
-        method = "mouseScrolled(DDDD)Z",
-        at = @At("HEAD"),
-        cancellable = true,
-        require = 0
-    )
-    private void aun$onClothScreenMouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY, CallbackInfoReturnable<Boolean> cir) {
-        if (AunConfigScreen.onClothScreenMouseScrolled((Screen) (Object) this, mouseX, mouseY, scrollY)) {
-            cir.setReturnValue(true);
         }
     }
 
