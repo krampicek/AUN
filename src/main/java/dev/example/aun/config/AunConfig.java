@@ -25,9 +25,14 @@ public class AunConfig implements ConfigData {
     public static class GeneralSettingsConfig {
         @ConfigEntry.Gui.Tooltip public boolean modEnabled = true;
         @ConfigEntry.Gui.Tooltip public String toggleKey = "N";
+    }
+
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.CollapsibleObject
+    public ProfileSubConfig profile = new ProfileSubConfig();
+    public static class ProfileSubConfig {
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ProfileMode profileMode = ProfileMode.DEFAULT;
-        @ConfigEntry.Gui.Tooltip public String customProfilePath = "";
+        @ConfigEntry.Gui.Tooltip public String customProfilePath = "default_profile.json";
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ExportAction exportOwnProfile = ExportAction.EXPORT_PROFILE;
     }
