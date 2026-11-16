@@ -15,6 +15,10 @@ public class AunConfig implements ConfigData {
         OWN_PROFILE
     }
 
+    public enum ExportAction {
+        EXPORT_PROFILE
+    }
+
     // ============================== GENERAL TAB ==============================
     @ConfigEntry.Category("general") @ConfigEntry.Gui.TransitiveObject
     public GeneralSettingsConfig general = new GeneralSettingsConfig();
@@ -24,6 +28,8 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ProfileMode profileMode = ProfileMode.DEFAULT;
         @ConfigEntry.Gui.Tooltip public String customProfilePath = "";
+        @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+        public ExportAction exportOwnProfile = ExportAction.EXPORT_PROFILE;
     }
 
     // ============================== QOL TAB ==============================
