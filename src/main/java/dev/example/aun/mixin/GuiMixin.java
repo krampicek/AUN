@@ -22,6 +22,7 @@ public abstract class GuiMixin {
         require = 0
     )
     private void aun$onHudRenderStart(DeltaTracker deltaTracker, boolean b1, boolean b2, CallbackInfo ci) {
+        AunClientFeatures.updateZoomFrameAndScrollLock();
         if (AunClientFeatures.shouldHideHudOnly()) {
             ci.cancel();
             return;
@@ -40,7 +41,7 @@ public abstract class GuiMixin {
 
     @ModifyConstant(method = "*", constant = @Constant(intValue = 15), require = 0)
     private int aun$centerCrosshair(int original) {
-        if (!AunConfigManager.get().hud.centralCrosshair) return original;
+        if (!AunConfigManager.get().playerHud.centralCrosshair) return original;
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.getWindow() != null && (mc.getWindow().getGuiScaledWidth() & 1) == 0) {
             return 14;
