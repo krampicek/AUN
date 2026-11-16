@@ -25,6 +25,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
 
@@ -45,13 +48,46 @@ public abstract class ScreenMixin {
         AunWorldFavorites.resetChestSearch();
 
         if (AunConfigScreen.isClothConfigScreen(self)) {
+            AunConfigManager.ensureProfileFoldersExist();
+
+            // Bottom-left button: Open Aun_profiles folder in OS file explorer
+            this.addRenderableWidget(Button.builder(Component.literal("§b📂 Aun_profiles"), btn -> {
+                AunConfigScreen.openFolderInOS(AunConfigScreen.getProfilesBaseDir());
+            })
+            .bounds(this.width / 2 - 210, this.height - 26, 90, 20)
+            .tooltip(Tooltip.create(Component.literal("Open the Aun_profiles folder in your file explorer")))
+            .build());
+
+            // Bottom-right button: Standalone Save (with a 6px gap from Save & Quit)
             this.addRenderableWidget(Button.builder(Component.literal("§6Save"), btn -> {
                 AunConfigScreen.saveWithoutClosing(self);
                 btn.setMessage(Component.literal("§aSaved!"));
             })
-            .bounds(this.width / 2 + 158, this.height - 26, 56, 20)
+            .bounds(this.width / 2 + 124, this.height - 26, 58, 20)
             .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
             .build());
+
+            // Arrow button & rollout dropdown items for the Profile black box
+            Button arrowBtn = Button.builder(Component.literal("§b▼"), btn -> {
+                AunConfigScreen.toggleDropdownList();
+            }).bounds(0, 0, 18, 18).build();
+            arrowBtn.visible = false;
+            arrowBtn.active = false;
+            this.addRenderableWidget(arrowBtn);
+
+            List<Button> itemBtns = new ArrayList<>();
+            for (int i = 0; i < 6; i++) {
+                final int idx = i;
+                Button itemBtn = Button.builder(Component.literal(""), btn -> {
+                    AunConfigScreen.selectProfileFromDropdown(self, idx);
+                }).bounds(0, 0, 100, 18).build();
+                itemBtn.visible = false;
+                itemBtn.active = false;
+                this.addRenderableWidget(itemBtn);
+                itemBtns.add(itemBtn);
+            }
+            AunConfigScreen.registerOverlayWidgets(self, arrowBtn, itemBtns);
+            AunConfigScreen.tickClothConfigScreen(self);
             return;
         }
 
