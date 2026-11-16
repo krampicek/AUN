@@ -3,12 +3,14 @@ package dev.example.aun.mixin;
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
@@ -56,15 +58,19 @@ public abstract class EntityMixin {
     @Unique
     private static ItemStack aun$getMoreDyesOutput(ItemStack ingredient) {
         String path = BuiltInRegistries.ITEM.getKey(ingredient.getItem()).getPath();
-        return switch (path) {
-            case "redstone", "fire_coral", "fire_coral_fan" -> new ItemStack(Items.RED_DYE, 1);
-            case "coal", "charcoal" -> new ItemStack(Items.BLACK_DYE, 1);
-            case "tube_coral", "tube_coral_fan" -> new ItemStack(Items.BLUE_DYE, 1);
-            case "brain_coral", "brain_coral_fan" -> new ItemStack(Items.PINK_DYE, 1);
-            case "bubble_coral", "bubble_coral_fan" -> new ItemStack(Items.PURPLE_DYE, 1);
-            case "horn_coral", "horn_coral_fan" -> new ItemStack(Items.YELLOW_DYE, 1);
-            default -> ItemStack.EMPTY;
+        String dyeId = switch (path) {
+            case "redstone", "fire_coral", "fire_coral_fan" -> "red_dye";
+            case "coal", "charcoal" -> "black_dye";
+            case "tube_coral", "tube_coral_fan" -> "blue_dye";
+            case "brain_coral", "brain_coral_fan" -> "pink_dye";
+            case "bubble_coral", "bubble_coral_fan" -> "purple_dye";
+            case "horn_coral", "horn_coral_fan" -> "yellow_dye";
+            default -> null;
         };
+        if (dyeId == null) return ItemStack.EMPTY;
+        Item dyeItem = BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace(dyeId));
+        if (dyeItem == null || dyeItem == Items.AIR) return ItemStack.EMPTY;
+        return new ItemStack(dyeItem, 1);
     }
 }
 // END OF FILE
