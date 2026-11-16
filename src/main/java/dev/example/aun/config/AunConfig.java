@@ -8,6 +8,16 @@ import me.shedaniel.autoconfig.annotation.ConfigEntry;
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
 
+    // ============================== GENERAL TAB ==============================
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.CollapsibleObject
+    public GeneralSettingsConfig general = new GeneralSettingsConfig();
+    public static class GeneralSettingsConfig {
+        @ConfigEntry.Gui.Tooltip public boolean modEnabled = true;
+        @ConfigEntry.Gui.Tooltip public String toggleKey = "N";
+        @ConfigEntry.Gui.Tooltip public String profileMode = "default";
+        @ConfigEntry.Gui.Tooltip public String customProfilePath = "";
+    }
+
     // ============================== QOL TAB ==============================
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
     public ClearVisionConfig clearVision = new ClearVisionConfig();
@@ -161,6 +171,7 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean infiniteVillagerTrading = true;
         @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
         @ConfigEntry.Gui.Tooltip public boolean trueVanillaGamemodeLock = false;
+        @ConfigEntry.Gui.Tooltip public boolean moreDyes = true;
     }
 
     // ========================== PERFORMANCE TAB ==========================
@@ -185,13 +196,15 @@ public class AunConfig implements ConfigData {
     }
 
     // ============= EXCLUDED MIRRORS =============
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded public transient GeneralSettingsConfig generalSettings = new GeneralSettingsConfig();
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient PlayerHudConfig hud = new PlayerHudConfig();
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient String zoomKey = "C", happyGhastBoost = "100", happyGhastHorizontalBoost = "100", happyGhastVerticalBoost = "100";
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient boolean clearWater = true, clearLava = true, clearPowderSnow = true, favouriteWorlds = true, worldPlaytimeDisplay = true, deletedWorldProtection = true, reachBehind = true, reachBehindSign = true, armorStandSwap = true, horseInfo = false, dismountOnClick = true, autoPickup = true, autoClimbLadders = true, autoTotem = true, closeCall = true, autoToolSwitch = true, simpleHarvest = true, stackRefill = true, betterF1 = true, disableNarrator = true, disableAdvancementKeybind = true, ctrlDropAllSameItems = true, bundleFix = true, moreChatHistory = true, hideArmor = true, centralCrosshair = true, raisedHotbar = true, chatTextCopy = true, headLocator = true, locatorBarCombination = true, recipeBookOrigin = true, chatHeads = true, hideOwnParticlesFirstPerson = true, hideOwnParticlesThirdPerson = true, bookScroll = true, zoom = true, dynamicLights = true, chestSearchBar = true, netherCalc = true, noResourcePackWarning = true, fastLanguageReload = true, fastQuit = true, fadelessLoading = true, borderlessFullscreen = true, safeLightning = true, noZombieDoorBreak = true, noCropTrampleFeatherFalling = true, noCropTrampleMobs = true, instaMineGlass = true, instaMineDeepslateWithHaste = true, speedHappyGhast = true, glowingTrims = true, coralReborn = true, hideBeaconBeamBehindTintedGlass = true, noBatSpawning = true, anvilNoTooExpensive = true, playerDropsNeverDespawn = true, infiniteVillagerTrading = true, enchantThroughFoliage = true, trueVanillaGamemodeLock = false, enderPearlFix = true, stackedMinecartFix = true, rocketElytraFix = true, netherPortalFix = true, piglinPortalFix = true, safeRedstone = true, noAnimalTemptDelay = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient boolean modEnabled = true, clearWater = true, clearLava = true, clearPowderSnow = true, favouriteWorlds = true, worldPlaytimeDisplay = true, deletedWorldProtection = true, reachBehind = true, reachBehindSign = true, armorStandSwap = true, horseInfo = false, dismountOnClick = true, autoPickup = true, autoClimbLadders = true, autoTotem = true, closeCall = true, autoToolSwitch = true, simpleHarvest = true, stackRefill = true, betterF1 = true, disableNarrator = true, disableAdvancementKeybind = true, ctrlDropAllSameItems = true, bundleFix = true, moreChatHistory = true, hideArmor = true, centralCrosshair = true, raisedHotbar = true, chatTextCopy = true, headLocator = true, locatorBarCombination = true, recipeBookOrigin = true, chatHeads = true, hideOwnParticlesFirstPerson = true, hideOwnParticlesThirdPerson = true, bookScroll = true, zoom = true, dynamicLights = true, chestSearchBar = true, netherCalc = true, noResourcePackWarning = true, fastLanguageReload = true, fastQuit = true, fadelessLoading = true, borderlessFullscreen = true, safeLightning = true, noZombieDoorBreak = true, noCropTrampleFeatherFalling = true, noCropTrampleMobs = true, instaMineGlass = true, instaMineDeepslateWithHaste = true, speedHappyGhast = true, glowingTrims = true, coralReborn = true, hideBeaconBeamBehindTintedGlass = true, noBatSpawning = true, anvilNoTooExpensive = true, playerDropsNeverDespawn = true, infiniteVillagerTrading = true, enchantThroughFoliage = true, trueVanillaGamemodeLock = false, moreDyes = true, enderPearlFix = true, stackedMinecartFix = true, rocketElytraFix = true, netherPortalFix = true, piglinPortalFix = true, safeRedstone = true, noAnimalTemptDelay = true;
 
     @Override public void validatePostLoad() { syncMirrors(); }
 
     public void syncMirrors() {
+        if (general != null) { modEnabled = general.modEnabled; }
         if (clearVision != null) { clearWater = clearVision.clearWater; clearLava = clearVision.clearLava; clearPowderSnow = clearVision.clearPowderSnow; }
         if (worldSettings != null) { favouriteWorlds = worldSettings.favouriteWorlds; worldPlaytimeDisplay = worldSettings.worldPlaytimeDisplay; deletedWorldProtection = worldSettings.deletedWorldProtection; }
         if (entities != null) { reachBehind = entities.reachBehind; reachBehindSign = entities.reachBehindSign; armorStandSwap = entities.armorStandSwap; horseInfo = false; dismountOnClick = entities.dismountOnClick; }
@@ -203,7 +216,7 @@ public class AunConfig implements ConfigData {
         if (mobGriefing != null) { safeLightning = mobGriefing.safeLightning; noZombieDoorBreak = mobGriefing.noZombieDoorBreak; noCropTrampleFeatherFalling = mobGriefing.noCropTrampleFeatherFalling; noCropTrampleMobs = mobGriefing.noCropTrampleMobs; }
         if (instaMine != null) { instaMineGlass = instaMine.instaMineGlass; instaMineDeepslateWithHaste = instaMine.instaMineDeepslateWithHaste; }
         if (happyGhast != null) { speedHappyGhast = happyGhast.speedHappyGhast; happyGhastHorizontalBoost = happyGhast.happyGhastHorizontalBoost; happyGhastVerticalBoost = happyGhast.happyGhastVerticalBoost; happyGhastBoost = happyGhast.happyGhastHorizontalBoost; }
-        if (essential != null) { glowingTrims = essential.glowingTrims; coralReborn = essential.coralReborn; hideBeaconBeamBehindTintedGlass = essential.hideBeaconBeamBehindTintedGlass; noBatSpawning = essential.noBatSpawning; anvilNoTooExpensive = essential.anvilNoTooExpensive; playerDropsNeverDespawn = essential.playerDropsNeverDespawn; infiniteVillagerTrading = essential.infiniteVillagerTrading; enchantThroughFoliage = essential.enchantThroughFoliage; trueVanillaGamemodeLock = essential.trueVanillaGamemodeLock; }
+        if (essential != null) { glowingTrims = essential.glowingTrims; coralReborn = essential.coralReborn; hideBeaconBeamBehindTintedGlass = essential.hideBeaconBeamBehindTintedGlass; noBatSpawning = essential.noBatSpawning; anvilNoTooExpensive = essential.anvilNoTooExpensive; playerDropsNeverDespawn = essential.playerDropsNeverDespawn; infiniteVillagerTrading = essential.infiniteVillagerTrading; enchantThroughFoliage = essential.enchantThroughFoliage; trueVanillaGamemodeLock = essential.trueVanillaGamemodeLock; moreDyes = essential.moreDyes; }
         if (mcBugs != null) { enderPearlFix = mcBugs.enderPearlFix; stackedMinecartFix = mcBugs.stackedMinecartFix; rocketElytraFix = mcBugs.rocketElytraFix; netherPortalFix = mcBugs.netherPortalFix; }
         if (otherFixes != null) { piglinPortalFix = otherFixes.piglinPortalFix; safeRedstone = otherFixes.safeRedstone; noAnimalTemptDelay = otherFixes.noAnimalTemptDelay; }
     }
