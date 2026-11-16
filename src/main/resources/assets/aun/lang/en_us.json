@@ -15,10 +15,10 @@
   "text.autoconfig.aun.option.profile": "Profile",
   "text.autoconfig.aun.option.profile.profileMode": "Settings Profile",
   "text.autoconfig.aun.option.profile.profileMode.@Tooltip": "Select Default, All On, All Off, or Own Profile.",
-  "text.autoconfig.aun.option.profile.customProfilePath": "Loadable Profile (Click ▼)",
-  "text.autoconfig.aun.option.profile.customProfilePath.@Tooltip": "Click the ▼ arrow in the box to roll out profiles from Aun_profiles/aun_profiles_loadable.",
+  "text.autoconfig.aun.option.profile.customProfilePath": "Loadable Profile",
+  "text.autoconfig.aun.option.profile.customProfilePath.@Tooltip": "Click the ▼ arrow in the box to roll out and scroll through profiles in Aun_profiles/aun_profiles_loadable.",
   "text.autoconfig.aun.option.profile.exportOwnProfile": "Export Own Profile",
-  "text.autoconfig.aun.option.profile.exportOwnProfile.@Tooltip": "Exports your current settings into Aun_profiles/aun_profiles_exported.",
+  "text.autoconfig.aun.option.profile.exportOwnProfile.@Tooltip": "Opens the Export menu to name and save your profile into Aun_profiles/aun_profiles_exported.",
 
   "text.autoconfig.aun.option.clearVision": "Clear Vision",
   "text.autoconfig.aun.option.clearVision.clearWater": "Clear Water",
