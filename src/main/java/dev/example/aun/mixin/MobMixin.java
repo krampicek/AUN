@@ -29,7 +29,7 @@ public abstract class MobMixin extends LivingEntity {
         AunConfig cfg = AunConfigManager.get();
         String path = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType()).getPath();
 
-        if (cfg.noBatSpawning && path.equals("bat") && !self.hasCustomName()) {
+        if (cfg.essential.noBatSpawning && path.equals("bat") && !self.hasCustomName()) {
             self.discard();
             return;
         }
@@ -41,16 +41,33 @@ public abstract class MobMixin extends LivingEntity {
             } catch (ReflectiveOperationException ignored) {}
         }
 
-        if (cfg.speedHappyGhast && path.equals("happy_ghast")) {
+        if (cfg.happyGhast.speedHappyGhast && path.equals("happy_ghast")) {
             MobEffectInstance speedEffect = self.getEffect(MobEffects.SPEED);
-            if (speedEffect != null || self.isVehicle()) {
-                int amp = speedEffect != null ? speedEffect.getAmplifier() + 1 : 1;
-                double hBoost = aun$parsePercent(cfg.happyGhastHorizontalBoost) / 100.0D;
-                double vBoost = aun$parsePercent(cfg.happyGhastVerticalBoost) / 100.0D;
+            if (speedEffect != null) {
+                int amp = speedEffect.getAmplifier() + 1;
                 Vec3 v = self.getDeltaMovement();
-                double hMult = 1.0D + (0.08D * amp * hBoost);
-                double vMult = 1.0D + (0.08D * amp * vBoost);
-                self.setDeltaMovement(new Vec3(v.x * hMult, v.y * vMult, v.z * hMult));
+                double nx = v.x, ny = v.y, nz = v.z;
+
+                if (cfg.happyGhast.horizontalSpeedEnabled) {
+                    double hFactor = aun$parsePercent(cfg.happyGhast.happyGhastHorizontalBoost) / 100.0D;
+                    double maxH = 0.9D * amp * Math.max(0.5D, hFactor);
+                    if (Math.hypot(nx, nz) < maxH) {
+                        double hMult = 1.0D + (0.08D * amp * hFactor);
+                        nx *= hMult;
+                        nz *= hMult;
+                    }
+                }
+
+                if (cfg.happyGhast.verticalSpeedEnabled && Math.abs(ny) > 0.015D) {
+                    double vFactor = aun$parsePercent(cfg.happyGhast.happyGhastVerticalBoost) / 100.0D;
+                    double maxV = 0.6D * amp * Math.max(0.5D, vFactor);
+                    if (Math.abs(ny) < maxV) {
+                        double vMult = 1.0D + (0.06D * amp * vFactor);
+                        ny *= vMult;
+                    }
+                }
+
+                self.setDeltaMovement(new Vec3(nx, ny, nz));
             }
         }
     }
