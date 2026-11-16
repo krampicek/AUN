@@ -1,58 +1,61 @@
 package dev.example.aun.config;
 
-import com.google.gson.Gson;
 import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.ConfigHolder;
 import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-/** Registers the config and hands out the live instance (edited by the A-U-N settings screen). */
 public final class AunConfigManager {
-    private static ConfigHolder<AunConfig> holder;
-    private static final AunConfig FALLBACK = new AunConfig();
-    private static final Gson GSON = new Gson();
+
+    private static boolean registered = false;
+    private static final AunConfig DISABLED_VIEW = createDisabledView();
 
     private AunConfigManager() {}
 
-    public static void register() {
-        holder = AutoConfig.register(AunConfig.class, GsonConfigSerializer::new);
+    public static synchronized void register() {
+        if (registered) return;
+        AutoConfig.register(AunConfig.class, GsonConfigSerializer::new);
+        registered = true;
+    }
+
+    public static AunConfig getRealConfig() {
+        if (!registered) register();
+        return AutoConfig.getConfigHolder(AunConfig.class).getConfig();
     }
 
     public static AunConfig get() {
-        return holder != null ? holder.getConfig() : FALLBACK;
-    }
-
-    /** Writes the current settings to config/aun.json. */
-    public static void save() {
-        AunConfig config = get();
-        config.syncMirrors();
-        if (holder != null) {
-            holder.save();
+        AunConfig real = getRealConfig();
+        if (real.general != null && !real.general.modEnabled) {
+            DISABLED_VIEW.general = real.general;
+            DISABLED_VIEW.modEnabled = false;
+            return DISABLED_VIEW;
         }
+        return real;
     }
 
-    /** The current settings as text, so the settings screen can undo changes with "Cancel". */
-    public static String snapshot() {
-        return GSON.toJson(get());
+    private static AunConfig createDisabledView() {
+        AunConfig cfg = new AunConfig();
+        disableAllBooleans(cfg);
+        cfg.syncMirrors();
+        cfg.modEnabled = false;
+        return cfg;
     }
 
-    /** Puts every setting back to what {@link #snapshot()} captured. */
-    public static void restore(String snapshot) {
-        AunConfig saved = GSON.fromJson(snapshot, AunConfig.class);
-        AunConfig live = get();
-        for (Field field : AunConfig.class.getDeclaredFields()) {
-            int modifiers = field.getModifiers();
-            if (Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers) || Modifier.isFinal(modifiers)) {
-                continue;
-            }
+    private static void disableAllBooleans(Object obj) {
+        if (obj == null) return;
+        for (Field f : obj.getClass().getDeclaredFields()) {
+            int m = f.getModifiers();
+            if (Modifier.isStatic(m)) continue;
             try {
-                field.set(live, field.get(saved));
-            } catch (IllegalAccessException ignored) {
-                // skip fields we cannot touch
-            }
+                f.setAccessible(true);
+                if (f.getType() == boolean.class) {
+                    f.setBoolean(obj, false);
+                } else if (!f.getType().isPrimitive() && f.getType() != String.class && !f.getType().isEnum()) {
+                    disableAllBooleans(f.get(obj));
+                }
+            } catch (Throwable ignored) {}
         }
-        live.syncMirrors();
     }
 }
+// END OF FILE
