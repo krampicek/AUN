@@ -2,6 +2,7 @@ package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.client.AunWorldFavorites;
+import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -19,8 +20,11 @@ public abstract class GuiGraphicsExtractorMixin {
 
     @Inject(method = "guiHeight", at = @At("RETURN"), cancellable = true, require = 0)
     private void aun$raiseHotbarByTwoPixels(CallbackInfoReturnable<Integer> cir) {
-        if (AunClientFeatures.inGuiHudRender && AunConfigManager.get().playerHud.raisedHotbar) {
-            cir.setReturnValue(cir.getReturnValue() - 2);
+        AunConfig cfg = AunConfigManager.get();
+        if ((cfg.general == null || cfg.general.modEnabled)
+                && AunClientFeatures.currentScreen == null
+                && cfg.playerHud.raisedHotbar) {
+            cir.setReturnValue(cir.getReturnValue() - 4);
         }
     }
 
@@ -66,7 +70,14 @@ public abstract class GuiGraphicsExtractorMixin {
         if (seq != null) {
             StringBuilder sb = new StringBuilder();
             seq.accept((idx, style, cp) -> { sb.appendCodePoint(cp); return true; });
-            AunWorldFavorites.onChatLineRendered(self, font, sb.toString(), x, y);
+            String plain = sb.toString();
+            AunWorldFavorites.onChatLineRendered(self, font, plain, x, y);
+            if (AunConfigManager.get().playerHud.chatHeads && (plain.startsWith("   ") || plain.startsWith("<"))) {
+                java.util.UUID sender = AunWorldFavorites.findSenderUuidForChatLine(plain);
+                if (sender != null) {
+                    AunWorldFavorites.drawPlayerHead8x8(self, sender, x, y);
+                }
+            }
         }
         if (AunConfigManager.get().entities.horseInfo
                 && AunClientFeatures.currentScreen instanceof AbstractContainerScreen<?> hs
