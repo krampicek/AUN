@@ -8,13 +8,21 @@ import me.shedaniel.autoconfig.annotation.ConfigEntry;
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
 
+    public enum ProfileMode {
+        DEFAULT,
+        ALL_ON,
+        ALL_OFF,
+        OWN_PROFILE
+    }
+
     // ============================== GENERAL TAB ==============================
-    @ConfigEntry.Category("general") @ConfigEntry.Gui.CollapsibleObject
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.TransitiveObject
     public GeneralSettingsConfig general = new GeneralSettingsConfig();
     public static class GeneralSettingsConfig {
         @ConfigEntry.Gui.Tooltip public boolean modEnabled = true;
         @ConfigEntry.Gui.Tooltip public String toggleKey = "N";
-        @ConfigEntry.Gui.Tooltip public String profileMode = "default";
+        @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+        public ProfileMode profileMode = ProfileMode.DEFAULT;
         @ConfigEntry.Gui.Tooltip public String customProfilePath = "";
     }
 
@@ -164,6 +172,7 @@ public class AunConfig implements ConfigData {
     public static class EssentialConfig {
         @ConfigEntry.Gui.Tooltip public boolean glowingTrims = true;
         @ConfigEntry.Gui.Tooltip public boolean coralReborn = true;
+        @ConfigEntry.Gui.Tooltip public boolean moreDyes = true;
         @ConfigEntry.Gui.Tooltip public boolean hideBeaconBeamBehindTintedGlass = true;
         @ConfigEntry.Gui.Tooltip public boolean noBatSpawning = true;
         @ConfigEntry.Gui.Tooltip public boolean anvilNoTooExpensive = true;
@@ -171,7 +180,6 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean infiniteVillagerTrading = true;
         @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
         @ConfigEntry.Gui.Tooltip public boolean trueVanillaGamemodeLock = false;
-        @ConfigEntry.Gui.Tooltip public boolean moreDyes = true;
     }
 
     // ========================== PERFORMANCE TAB ==========================
