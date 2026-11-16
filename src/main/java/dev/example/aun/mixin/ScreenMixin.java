@@ -1,6 +1,7 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
+import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.Minecraft;
@@ -42,6 +43,35 @@ public abstract class ScreenMixin {
         Screen self = (Screen) (Object) this;
         AunClientFeatures.currentScreen = self;
         AunWorldFavorites.resetChestSearch();
+
+        if (AunConfigScreen.isClothConfigScreen(self)) {
+            // Standalone Save Button (saves without quitting Cloth Config)
+            this.addRenderableWidget(Button.builder(Component.literal("§6Save"), btn -> {
+                AunConfigScreen.saveWithoutClosing(self);
+                btn.setMessage(Component.literal("§aSaved!"));
+            })
+            .bounds(this.width / 2 + 158, this.height - 26, 48, 20)
+            .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
+            .build());
+
+            // Link Own Profile Button (opens desktop file browser)
+            this.addRenderableWidget(Button.builder(Component.literal("§b📂 Link Profile"), btn -> {
+                AunConfigScreen.openProfileFileChooser(self, null);
+            })
+            .bounds(this.width / 2 - 236, this.height - 26, 78, 20)
+            .tooltip(Tooltip.create(Component.literal("Open desktop file browser to link your own profile (.json)")))
+            .build());
+
+            // Export Own Profile Button (exports to .minecraft / Prism folder and opens Windows Explorer)
+            this.addRenderableWidget(Button.builder(Component.literal("§d📤 Export"), btn -> {
+                AunConfigScreen.exportOwnProfile(self);
+                btn.setMessage(Component.literal("§aExported!"));
+            })
+            .bounds(this.width / 2 + 210, this.height - 26, 62, 20)
+            .tooltip(Tooltip.create(Component.literal("Export current settings to aun_exported_profile.json and open folder")))
+            .build());
+            return;
+        }
 
         if (self instanceof InventoryScreen invScreen) {
             if (AunConfigManager.get().playerHud.hideArmor) {
@@ -113,8 +143,4 @@ public abstract class ScreenMixin {
     }
 
     @Unique
-    private static Component aun$getEyeLabel() {
-        return Component.literal(AunClientFeatures.isArmorVisualHidden() ? "§8👁" : "§a👁");
-    }
-}
-// END OF FILE
+    private static Component
