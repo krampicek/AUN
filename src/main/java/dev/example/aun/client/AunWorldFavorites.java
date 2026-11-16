@@ -2,6 +2,7 @@ package dev.example.aun.client;
 
 import dev.example.aun.config.AunConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -22,10 +23,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.phys.Vec3;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -60,8 +63,8 @@ public final class AunWorldFavorites {
     public static EditBox activeChestSearchBox = null;
     private static boolean chestSearchActive = false;
     private static String searchQuery = "";
+    public static boolean renderedLocatorBarThisFrame = false;
 
-    // Chat Highlight & Copy State (without touching input box)
     public record RenderedChatLine(int x, int y, String text) {}
     private static final List<RenderedChatLine> VISIBLE_CHAT_LINES = new ArrayList<>();
     private static String selectedChatText = "";
@@ -86,10 +89,7 @@ public final class AunWorldFavorites {
         draggingChatSelection = false;
     }
 
-    public static boolean isChestSearchActive() {
-        return chestSearchActive && AunConfigManager.get().remainingHuds.chestSearchBar && !searchQuery.isBlank();
-    }
-
+    public static boolean isChestSearchActive() { return chestSearchActive && AunConfigManager.get().remainingHuds.chestSearchBar && !searchQuery.isBlank(); }
     public static void setChestSearchActive(boolean active) { chestSearchActive = active; }
     public static void setSearchQuery(String q) { searchQuery = q == null ? "" : q; }
 
@@ -115,12 +115,10 @@ public final class AunWorldFavorites {
         double bps = m.getAttributeValue(Attributes.MOVEMENT_SPEED) * 42.157787584D;
         double js = m.getAttribute(Attributes.JUMP_STRENGTH) != null ? m.getAttributeValue(Attributes.JUMP_STRENGTH) : 0.0D;
         double jb = Math.max(0.0D, -0.1817584952D * Math.pow(js, 3) + 3.689713992D * Math.pow(js, 2) + 2.128599134D * js - 0.343930367D);
-        String line1 = String.format(Locale.ROOT, "Speed: %.2f b/s", bps);
-        String line2 = String.format(Locale.ROOT, "Jump: %.2f b", jb);
         try {
             Method drawText = g.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class);
-            drawText.invoke(g, font, line1, 83, 26, 0xFF404040, false);
-            drawText.invoke(g, font, line2, 83, 40, 0xFF404040, false);
+            drawText.invoke(g, font, String.format(Locale.ROOT, "Speed: %.2f b/s", bps), 83, 26, 0xFF404040, false);
+            drawText.invoke(g, font, String.format(Locale.ROOT, "Jump: %.2f b", jb), 83, 40, 0xFF404040, false);
         } catch (ReflectiveOperationException ignored) {}
     }
 
@@ -158,10 +156,55 @@ public final class AunWorldFavorites {
         if (s == null || s.isEmpty()) return false;
         String qCompact = q.replace(" ", "").replace("_", "");
         String name = s.getHoverName().getString().toLowerCase(Locale.ROOT);
-        String nameCompact = name.replace(" ", "").replace("_", "");
         String id = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().toLowerCase(Locale.ROOT);
-        String idCompact = id.replace("_", "");
-        return name.contains(q) || nameCompact.contains(qCompact) || id.contains(q) || idCompact.contains(qCompact);
+        return name.contains(q) || name.replace(" ", "").contains(qCompact) || id.contains(q) || id.replace("_", "").contains(qCompact);
+    }
+
+    public static boolean handleSprintDropAllInContainer(AbstractContainerScreen<?> s) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.getWindow() == null) return false;
+        double mx = mc.mouseHandler.xpos() * s.width / mc.getWindow().getScreenWidth();
+        double my = mc.mouseHandler.ypos() * s.height / mc.getWindow().getScreenHeight();
+        Slot hov = findHoveredSlot(s, mx, my);
+        if (hov == null || !hov.hasItem() || !hov.mayPickup(mc.player)) return false;
+        ItemStack tpl = hov.getItem().copy();
+
+        Method slotClick = null;
+        Class<?> cls = s.getClass();
+        while (cls != null && cls != Object.class && slotClick == null) {
+            for (Method m : cls.getDeclaredMethods()) {
+                if (m.getParameterCount() == 4 && m.getParameterTypes()[0] == Slot.class && m.getParameterTypes()[3] == ContainerInput.class) {
+                    m.setAccessible(true);
+                    slotClick = m;
+                    break;
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+        Method menuClick = null;
+        for (Method m : s.getMenu().getClass().getSuperclass().getDeclaredMethods()) {
+            if (m.getParameterCount() == 4 && m.getParameterTypes()[0] == int.class && m.getParameterTypes()[2] == ContainerInput.class) {
+                m.setAccessible(true);
+                menuClick = m;
+                break;
+            }
+        }
+
+        boolean droppedAny = false;
+        for (Slot sl : s.getMenu().slots) {
+            if (sl.hasItem() && sl.mayPickup(mc.player) && ItemStack.isSameItemSameComponents(sl.getItem(), tpl)) {
+                try {
+                    if (slotClick != null) {
+                        slotClick.invoke(s, sl, sl.index, 1, ContainerInput.THROW);
+                        droppedAny = true;
+                    } else if (menuClick != null) {
+                        menuClick.invoke(s.getMenu(), sl.index, 1, ContainerInput.THROW, mc.player);
+                        droppedAny = true;
+                    }
+                } catch (ReflectiveOperationException ignored) {}
+            }
+        }
+        return droppedAny;
     }
 
     public static boolean onScreenMouseClicked(Screen screen, MouseButtonEvent event) {
@@ -170,10 +213,7 @@ public final class AunWorldFavorites {
             box.setX(getContainerLeftPos(cs) + 80);
             box.setY(getContainerTopPos(cs) + 4);
             if (box.isMouseOver(event.x(), event.y())) {
-                if (event.button() == 1) {
-                    box.setValue("");
-                    setSearchQuery("");
-                }
+                if (event.button() == 1) { box.setValue(""); setSearchQuery(""); }
                 box.setFocused(true);
                 screen.setFocused(box);
                 return true;
@@ -182,19 +222,14 @@ public final class AunWorldFavorites {
             }
         }
 
-        if (screen instanceof AbstractContainerScreen<?> cs
-                && AunConfigManager.get().remainingHuds.recipeBookOrigin
-                && event.button() == 1) {
+        if (screen instanceof AbstractContainerScreen<?> cs && AunConfigManager.get().remainingHuds.recipeBookOrigin && event.button() == 1) {
             Slot hovered = findHoveredSlot(cs, event.x(), event.y());
             if (hovered != null && hovered.hasItem() && !(hovered.container instanceof Inventory)) {
                 if (linkRecipeBookToIngredient(cs, hovered.getItem())) return true;
             }
         }
 
-        if (screen instanceof ChatScreen
-                && AunConfigManager.get().remainingHuds.chatTextCopy
-                && event.button() == 0
-                && event.y() < screen.height - 24) {
+        if (screen instanceof ChatScreen && AunConfigManager.get().remainingHuds.chatTextCopy && event.button() == 0 && event.y() < screen.height - 24) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.font != null) {
                 for (RenderedChatLine line : VISIBLE_CHAT_LINES) {
@@ -220,17 +255,10 @@ public final class AunWorldFavorites {
     public static boolean onScreenKeyPressed(Screen screen, KeyEvent event) {
         EditBox box = activeChestSearchBox;
         if (box != null && box.isFocused()) {
-            if (event.key() == 256) {
-                box.setFocused(false);
-                screen.setFocused(null);
-                return true;
-            }
+            if (event.key() == 256) { box.setFocused(false); screen.setFocused(null); return true; }
             if (event.key() == 259) {
                 String cur = box.getValue();
-                if (!cur.isEmpty()) {
-                    box.setValue(cur.substring(0, cur.length() - 1));
-                    setSearchQuery(box.getValue());
-                }
+                if (!cur.isEmpty()) { box.setValue(cur.substring(0, cur.length() - 1)); setSearchQuery(box.getValue()); }
                 return true;
             }
             box.keyPressed(event);
@@ -238,20 +266,25 @@ public final class AunWorldFavorites {
             return true;
         }
 
-        if (screen instanceof ChatScreen
-                && AunConfigManager.get().remainingHuds.chatTextCopy
-                && !selectedChatText.isEmpty()
-                && selStartIdx != selEndIdx
+        Minecraft mc = Minecraft.getInstance();
+        if (screen instanceof AbstractContainerScreen<?> cs
+                && AunConfigManager.get().remainingHuds.ctrlDropAllSameItems
+                && mc != null && mc.options != null && mc.options.keyDrop.matches(event)) {
+            boolean sprintOrShift = AunClientFeatures.isKeyMappingPhysicallyDown(mc.options.keySprint) || event.hasShiftDown() || event.hasControlDown();
+            if (sprintOrShift && handleSprintDropAllInContainer(cs)) {
+                return true;
+            }
+        }
+
+        if (screen instanceof ChatScreen && AunConfigManager.get().remainingHuds.chatTextCopy
+                && !selectedChatText.isEmpty() && selStartIdx != selEndIdx
                 && (event.isCopy() || (event.key() == 67 && event.hasControlDown()))) {
             int a = Math.max(0, Math.min(selStartIdx, selEndIdx));
             int b = Math.min(selectedChatText.length(), Math.max(selStartIdx, selEndIdx));
-            if (b > a) {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc != null && mc.keyboardHandler != null) {
-                    mc.keyboardHandler.setClipboard(selectedChatText.substring(a, b));
-                    if (mc.player != null) mc.player.sendOverlayMessage(Component.literal("§aCopied highlighted chat text!"));
-                    return true;
-                }
+            if (b > a && mc != null && mc.keyboardHandler != null) {
+                mc.keyboardHandler.setClipboard(selectedChatText.substring(a, b));
+                if (mc.player != null) mc.player.sendOverlayMessage(Component.literal("§aCopied highlighted chat text!"));
+                return true;
             }
         }
         return false;
@@ -263,10 +296,7 @@ public final class AunWorldFavorites {
             String ch = event.codepointAsString();
             if (ch != null && !ch.isEmpty() && ch.charAt(0) >= 32) {
                 String cur = box.getValue();
-                if (cur.length() < 24) {
-                    box.setValue(cur + ch);
-                    setSearchQuery(box.getValue());
-                }
+                if (cur.length() < 24) { box.setValue(cur + ch); setSearchQuery(box.getValue()); }
                 return true;
             }
         }
@@ -275,7 +305,16 @@ public final class AunWorldFavorites {
 
     public static void onChatLineRendered(GuiGraphicsExtractor g, Font font, String plain, int x, int y) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || !(AunClientFeatures.currentScreen instanceof ChatScreen chatScreen) || y >= chatScreen.height - 24) return;
+        if (mc == null || plain == null || plain.isEmpty()) return;
+
+        if (AunConfigManager.get().playerHud.chatHeads && y > mc.getWindow().getGuiScaledHeight() - 180 && x <= 12) {
+            UUID sender = findSenderUuidForChatLine(plain);
+            if (sender != null) {
+                drawPlayerHead8x8(g, sender, x, y);
+            }
+        }
+
+        if (!(AunClientFeatures.currentScreen instanceof ChatScreen chatScreen) || y >= chatScreen.height - 24) return;
         VISIBLE_CHAT_LINES.removeIf(l -> l.y() == y);
         VISIBLE_CHAT_LINES.add(new RenderedChatLine(x, y, plain));
         if (VISIBLE_CHAT_LINES.size() > 60) VISIBLE_CHAT_LINES.remove(0);
@@ -283,20 +322,16 @@ public final class AunWorldFavorites {
         if (draggingChatSelection) {
             if (mc.mouseHandler.isLeftPressed() && mc.getWindow() != null) {
                 double mx = mc.mouseHandler.xpos() * chatScreen.width / mc.getWindow().getScreenWidth();
-                int relX = Math.max(0, (int) mx - selLineX);
-                selEndIdx = font.plainSubstrByWidth(selectedChatText, relX).length();
-            } else {
-                draggingChatSelection = false;
-            }
+                selEndIdx = font.plainSubstrByWidth(selectedChatText, Math.max(0, (int) mx - selLineX)).length();
+            } else draggingChatSelection = false;
         }
 
         if (!selectedChatText.isEmpty() && y == selLineY && selStartIdx != selEndIdx) {
             int a = Math.max(0, Math.min(selStartIdx, selEndIdx));
             int b = Math.min(selectedChatText.length(), Math.max(selStartIdx, selEndIdx));
             if (b > a) {
-                int x1 = selLineX + font.width(selectedChatText.substring(0, a));
-                int x2 = selLineX + font.width(selectedChatText.substring(0, b));
-                invokeFill(g, x1, y - 1, x2, y + 9, 0x883377FF);
+                invokeFill(g, selLineX + font.width(selectedChatText.substring(0, a)), y - 1,
+                        selLineX + font.width(selectedChatText.substring(0, b)), y + 9, 0x883377FF);
             }
         }
     }
@@ -321,12 +356,7 @@ public final class AunWorldFavorites {
         try (var out = Files.newOutputStream(FAV_FILE)) { p.store(out, "A-U-N Favourite Worlds"); } catch (IOException ignored) {}
     }
 
-    public static int getWorldTier(String id) {
-        if (id == null || id.isEmpty()) return 0;
-        ensureLoaded();
-        return WORLD_TIERS.getOrDefault(id, 0);
-    }
-
+    public static int getWorldTier(String id) { if (id == null || id.isEmpty()) return 0; ensureLoaded(); return WORLD_TIERS.getOrDefault(id, 0); }
     public static String getLevelIdFromSummary(Object sum) {
         if (sum == null) return "";
         try { Object r = sum.getClass().getMethod("getLevelId").invoke(sum); if (r instanceof String s) return s; } catch (ReflectiveOperationException ignored) {}
@@ -461,10 +491,7 @@ public final class AunWorldFavorites {
                     try {
                         f.setAccessible(true);
                         EditBox searchBox = (EditBox) f.get(rbc);
-                        if (searchBox != null) {
-                            searchBox.setValue(ingredient.getHoverName().getString());
-                            return true;
-                        }
+                        if (searchBox != null) { searchBox.setValue(ingredient.getHoverName().getString()); return true; }
                     } catch (ReflectiveOperationException ignored) {}
                 }
             }
@@ -516,17 +543,42 @@ public final class AunWorldFavorites {
         }
     }
 
+    public static void drawCombinedXpBarBackground(GuiGraphicsExtractor g) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.gameMode == null || !mc.gameMode.hasExperience()) return;
+        int x = g.guiWidth() / 2 - 91;
+        int y = g.guiHeight() - 29;
+        invokeFill(g, x, y, x + 182, y + 5, 0xFF000000);
+        invokeFill(g, x + 1, y + 1, x + 181, y + 4, 0xFF223311);
+        int fillW = (int) (mc.player.experienceProgress * 180.0F);
+        if (fillW > 0) {
+            invokeFill(g, x + 1, y + 1, x + 1 + fillW, y + 4, 0xFF80FF20);
+        }
+        if (mc.player.experienceLevel > 0 && mc.font != null) {
+            String lvl = Integer.toString(mc.player.experienceLevel);
+            int tx = g.guiWidth() / 2 - mc.font.width(lvl) / 2;
+            int ty = y - 6;
+            try {
+                Method drawText = g.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class);
+                drawText.invoke(g, mc.font, lvl, tx, ty, 0xFF80FF20, true);
+            } catch (ReflectiveOperationException ignored) {}
+        }
+    }
+
     public static void renderPlayerHeadsOnLocatorBar(GuiGraphicsExtractor g) {
         if (!AunConfigManager.get().playerHud.headLocator) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.level == null || mc.player == null) return;
+        if (mc == null || mc.level == null || mc.player == null || mc.gameRenderer == null) return;
+        Camera cam = mc.gameRenderer.getMainCamera();
+        Vec3 camPos = cam.position();
+        float camYaw = cam.yRot();
         int cx = g.guiWidth() / 2;
         int by = g.guiHeight() - 30;
         for (Player o : mc.level.players()) {
             if (o == mc.player) continue;
-            float diff = Mth.wrapDegrees((float) (Math.toDegrees(Math.atan2(o.getZ() - mc.player.getZ(), o.getX() - mc.player.getX())) - 90.0D - mc.player.getYRot()));
+            float diff = Mth.wrapDegrees((float) (Math.toDegrees(Math.atan2(o.getZ() - camPos.z, o.getX() - camPos.x)) - 90.0D - camYaw));
             if (Math.abs(diff) <= 60.0F) {
-                int hx = cx + Math.round((diff / 60.0F) * 85.0F) - 4;
+                int hx = cx + Math.round((diff / 60.0F) * 86.5F) - 4;
                 drawPlayerHead8x8(g, o.getUUID(), hx, by);
             }
         }
