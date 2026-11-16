@@ -49,23 +49,8 @@ public abstract class ScreenMixin {
                 AunConfigScreen.saveWithoutClosing(self);
                 btn.setMessage(Component.literal("§aSaved!"));
             })
-            .bounds(this.width / 2 + 158, this.height - 26, 48, 20)
+            .bounds(this.width / 2 + 158, this.height - 26, 56, 20)
             .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
-            .build());
-
-            this.addRenderableWidget(Button.builder(Component.literal("§b📂 Link Profile"), btn -> {
-                AunConfigScreen.openProfileFileChooser(self, null);
-            })
-            .bounds(this.width / 2 - 236, this.height - 26, 78, 20)
-            .tooltip(Tooltip.create(Component.literal("Open desktop file browser to link your own profile (.json)")))
-            .build());
-
-            this.addRenderableWidget(Button.builder(Component.literal("§d📤 Export"), btn -> {
-                AunConfigScreen.exportOwnProfile(self);
-                btn.setMessage(Component.literal("§aExported!"));
-            })
-            .bounds(this.width / 2 + 210, this.height - 26, 62, 20)
-            .tooltip(Tooltip.create(Component.literal("Export current settings to aun_exported_profile.json and open folder")))
             .build());
             return;
         }
