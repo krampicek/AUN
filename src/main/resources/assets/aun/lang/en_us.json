@@ -4,7 +4,6 @@
   "text.autoconfig.aun.category.vanillaPlus": "Vanilla+",
   "text.autoconfig.aun.category.performance": "Performance",
   "text.autoconfig.aun.category.fixes": "Fixes",
-
   "text.autoconfig.aun.option.clearVision": "Clear Vision",
   "text.autoconfig.aun.option.clearVision.clearWater": "Clear Water",
   "text.autoconfig.aun.option.clearVision.clearWater.@Tooltip": "Removes underwater fog for clear vision.",
@@ -12,7 +11,6 @@
   "text.autoconfig.aun.option.clearVision.clearLava.@Tooltip": "Removes under-lava fog so you can see clearly in lava.",
   "text.autoconfig.aun.option.clearVision.clearPowderSnow": "Clear Powdered Snow",
   "text.autoconfig.aun.option.clearVision.clearPowderSnow.@Tooltip": "Removes the thick fog when inside powdered snow.",
-
   "text.autoconfig.aun.option.worldSettings": "World Setting",
   "text.autoconfig.aun.option.worldSettings.favouriteWorlds": "Favourite Worlds (Gold & Diamond)",
   "text.autoconfig.aun.option.worldSettings.favouriteWorlds.@Tooltip": "Adds a Favourite button in the World Selection menu: 1x = Gold, 2x = Diamond, 3x = Classic.",
@@ -20,7 +18,6 @@
   "text.autoconfig.aun.option.worldSettings.worldPlaytimeDisplay.@Tooltip": "Displays your total hours played next to the last-played date in the World Selection menu.",
   "text.autoconfig.aun.option.worldSettings.deletedWorldProtection": "Deleted World Protection (Recycle Bin)",
   "text.autoconfig.aun.option.worldSettings.deletedWorldProtection.@Tooltip": "Moves deleted worlds into saves/_deleted_worlds_bin instead of permanently deleting them.",
-
   "text.autoconfig.aun.option.entities": "Entities",
   "text.autoconfig.aun.option.entities.reachBehind": "Reach Behind Item Frames",
   "text.autoconfig.aun.option.entities.reachBehind.@Tooltip": "Right-click an item frame to open the container behind it.",
@@ -32,7 +29,6 @@
   "text.autoconfig.aun.option.entities.horseInfo.@Tooltip": "Shows your horse's speed and jump height inside the empty box in the horse inventory.",
   "text.autoconfig.aun.option.entities.dismountOnClick": "Click To Dismount",
   "text.autoconfig.aun.option.entities.dismountOnClick.@Tooltip": "Right-click any mob in a boat or minecart to dismount it.",
-
   "text.autoconfig.aun.option.autoSettings": "Auto Setting",
   "text.autoconfig.aun.option.autoSettings.autoPickup": "Auto Pickup",
   "text.autoconfig.aun.option.autoSettings.autoPickup.@Tooltip": "Items from blocks you mine go straight into your inventory.",
@@ -40,7 +36,6 @@
   "text.autoconfig.aun.option.autoSettings.autoClimbLadders.@Tooltip": "On a ladder, look up to climb up automatically and look down to climb down.",
   "text.autoconfig.aun.option.autoSettings.autoTotem": "Auto Totem",
   "text.autoconfig.aun.option.autoSettings.autoTotem.@Tooltip": "Automatically puts a new Totem of Undying into the hand where your totem popped.",
-
   "text.autoconfig.aun.option.hud": "HUD",
   "text.autoconfig.aun.option.hud.stackRefill": "Stack Refill",
   "text.autoconfig.aun.option.hud.stackRefill.@Tooltip": "Replaces a consumed stack in your hand with a matching stack from your inventory.",
@@ -74,7 +69,6 @@
   "text.autoconfig.aun.option.hud.hideOwnParticlesFirstPerson.@Tooltip": "Hides your own potion effect particles in first-person view.",
   "text.autoconfig.aun.option.hud.hideOwnParticlesThirdPerson": "Hide Own Effect Particles (3rd Person)",
   "text.autoconfig.aun.option.hud.hideOwnParticlesThirdPerson.@Tooltip": "Hides your own potion effect particles in third-person view.",
-
   "text.autoconfig.aun.option.hideNametags": "Hide Nametags",
   "text.autoconfig.aun.option.hideNametags.hidePlayerNametags": "Hide Player Nametags",
   "text.autoconfig.aun.option.hideNametags.hideMobNametags": "Hide All Mob Nametags",
@@ -82,7 +76,6 @@
   "text.autoconfig.aun.option.hideNametags.hidePassiveMobNametags": "Hide Passive Mob Nametags",
   "text.autoconfig.aun.option.hideNametags.hideTamedMobNametags": "Hide Tamed Mob Nametags",
   "text.autoconfig.aun.option.hideNametags.hiddenMobsList": "Hide Specific Mobs (Comma-Separated)",
-
   "text.autoconfig.aun.option.cutThrough": "Cut Through Tall Grass",
   "text.autoconfig.aun.option.doubleDoors": "Double Doors",
   "text.autoconfig.aun.option.simpleHarvest": "Simple Harvest",
@@ -108,7 +101,6 @@
   "text.autoconfig.aun.option.fastQuit": "Fast World Quit",
   "text.autoconfig.aun.option.fastLanguageReload": "Fast Language Reload",
   "text.autoconfig.aun.option.chestSearchBar": "Search Bar In Chests",
-
   "text.autoconfig.aun.option.mobGriefing": "Griefing Protection",
   "text.autoconfig.aun.option.mobGriefing.antiEndermanPickup": "Anti-Enderman Block Pickup",
   "text.autoconfig.aun.option.mobGriefing.antiCreeperGrief": "Anti-Creeper Block Damage",
@@ -119,11 +111,9 @@
   "text.autoconfig.aun.option.mobGriefing.noZombieDoorBreak": "Zombies Don't Break Doors",
   "text.autoconfig.aun.option.mobGriefing.noCropTrampleFeatherFalling": "No Crop Trample (Feather Falling)",
   "text.autoconfig.aun.option.mobGriefing.noCropTrampleMobs": "No Crop Trample (Mobs)",
-
   "text.autoconfig.aun.option.instaMine": "Insta-Mine",
   "text.autoconfig.aun.option.instaMine.instaMineGlass": "Insta-Mine Glass",
   "text.autoconfig.aun.option.instaMine.instaMineDeepslateWithHaste": "Insta-Mine Deepslate (Haste II)",
-
   "text.autoconfig.aun.option.hideBeaconBeamBehindTintedGlass": "Tinted Glass Hides Beacon Beam",
   "text.autoconfig.aun.option.speedHappyGhast": "Speed Potions For Happy Ghasts",
   "text.autoconfig.aun.option.happyGhastHorizontalBoost": "Happy Ghast Horizontal Speed Boost (%)",
@@ -136,20 +126,16 @@
   "text.autoconfig.aun.option.infiniteVillagerTrading": "Infinite Villager Trading",
   "text.autoconfig.aun.option.enchantThroughFoliage": "Enchant Through Foliage",
   "text.autoconfig.aun.option.trueVanillaGamemodeLock": "True Vanilla (Lock Gamemode)",
-
   "text.autoconfig.aun.option.stackingXp": "Stacking XP Orbs",
-
   "text.autoconfig.aun.option.mcBugs": "MC Bugs",
   "text.autoconfig.aun.option.mcBugs.enderPearlFix": "Ender Pearl Fix (MC-306936)",
   "text.autoconfig.aun.option.mcBugs.stackedMinecartFix": "Stacked Minecart Momentum Fix (MC-14)",
   "text.autoconfig.aun.option.mcBugs.rocketElytraFix": "Rocket Elytra Speed Fix",
   "text.autoconfig.aun.option.mcBugs.netherPortalFix": "Nether Portal Link Fix",
-
   "text.autoconfig.aun.option.otherFixes": "Others",
   "text.autoconfig.aun.option.otherFixes.piglinPortalFix": "Piglin Portal Fix",
   "text.autoconfig.aun.option.otherFixes.safeRedstone": "Safe Redstone",
   "text.autoconfig.aun.option.otherFixes.noAnimalTemptDelay": "No Animal Tempt Delay",
-
   "key.aun.fullbright": "Toggle Fullbright",
   "key.aun.zoom": "Zoom",
   "key.aun.face_into": "Place Block Facing Into Clicked Face",
@@ -157,5 +143,10 @@
   "key.category.aun.main": "A-U-N",
   "key.category.aun.keys": "A-U-N Controls",
   "gamerule.aun.macenerfdmgplayer": "Mace nerf (player vs player)",
-  "gamerule.aun.macenerfdmgplayer.description": "A mace smash from a player always deals exactly 1 HP to another player."
+  "gamerule.aun.macenerfdmgplayer.description": "A mace smash from a player always deals exactly 1 HP to another player.",
+  "aun.gui.general": "General",
+  "aun.gui.on": "ON",
+  "aun.gui.off": "OFF",
+  "aun.gui.cancel": "Cancel",
+  "aun.gui.save": "Save & Quit"
 }
