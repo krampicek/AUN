@@ -2,7 +2,8 @@ package dev.example.aun.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import me.shedaniel.autoconfig.AutoConfig;
@@ -29,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -68,16 +70,13 @@ public class AunConfigScreen extends Screen {
         } catch (Throwable ignored) {}
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static void applyModLanguage(String langCode) {
         String code = (langCode == null || langCode.isBlank()) ? "en_us" : langCode.trim().toLowerCase(Locale.ROOT);
         try (InputStream in = AunConfigScreen.class.getResourceAsStream("/assets/aun/lang/" + code + ".json")) {
             if (in == null) return;
-            Map<String, String> parsed = GSON.fromJson(
-                    new InputStreamReader(in, StandardCharsets.UTF_8),
-                    new TypeToken>() {}.getType()
-            );
-            if (parsed == null || parsed.isEmpty()) return;
+            JsonObject jsonObj = GSON.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), JsonObject.class);
+            if (jsonObj == null) return;
 
             Language langInstance = Language.getInstance();
             if (langInstance == null) return;
@@ -87,9 +86,14 @@ public class AunConfigScreen extends Screen {
                     if (Map.class.isAssignableFrom(f.getType()) && !Modifier.isStatic(f.getModifiers())) {
                         f.setAccessible(true);
                         Object cur = f.get(langInstance);
-                        if (cur instanceof Map<?, ?> map) {
-                            Map<String, String> mutable = new HashMap<>((Map<String, String>) map);
-                            mutable.putAll(parsed);
+                        if (cur instanceof Map map) {
+                            Map mutable = new HashMap(map);
+                            for (String key : jsonObj.keySet()) {
+                                JsonElement el = jsonObj.get(key);
+                                if (el != null && el.isJsonPrimitive()) {
+                                    mutable.put(key, el.getAsString());
+                                }
+                            }
                             f.set(langInstance, mutable);
                             lastAppliedLangCode = code;
                             return;
@@ -135,7 +139,7 @@ public class AunConfigScreen extends Screen {
         return out;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static Screen create(Screen parent) {
         AunConfigManager.ensureProfileFoldersExist();
         AunConfig real = AunConfigManager.getRealConfig();
@@ -156,8 +160,8 @@ public class AunConfigScreen extends Screen {
             try {
                 Class<?> cls = Class.forName(clsName);
                 Method m = cls.getMethod("getConfigScreen", Class.class, Screen.class);
-                Supplier<Screen> supplier = (Supplier<Screen>) m.invoke(null, AunConfig.class, parent);
-                return supplier.get();
+                Supplier supplier = (Supplier) m.invoke(null, AunConfig.class, parent);
+                return (Screen) supplier.get();
             } catch (Throwable ignored) {
             }
         }
@@ -184,10 +188,9 @@ public class AunConfigScreen extends Screen {
 
         layoutBottomBarButtons(screen);
 
-        // Scan Cloth Config entries for LINK, EXPORT, or LANGUAGE button clicks
         AbstractSelectionList<?> listWidget = findListWidget(screen);
         if (listWidget != null) {
-            Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+            Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
             checkEntriesForSubWindowOpen(screen, listWidget.children(), visited, 0);
         }
     }
