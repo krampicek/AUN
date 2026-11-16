@@ -7,10 +7,11 @@ import dev.example.aun.config.AunConfigManager;
 import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -22,27 +23,38 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class AunConfigScreen extends Screen {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static AunConfig.ProfileMode initialProfileModeOnOpen = null;
+    private static final int MAX_VISIBLE_PROFILES = 5;
+    private static final int WIDE_BOX_WIDTH = 240;
 
-    private static Screen trackedScreen = null;
-    private static EditBox cachedProfileBox = null;
-    private static Button arrowDropdownBtn = null;
-    private static final List<Button> dropdownItemButtons = new ArrayList<>();
+    private static AunConfig.ProfileMode initialProfileModeOnOpen = null;
+    private static Button ourBrowseButton = null;
+    private static Button ourSaveButton = null;
+
+    // Custom wide box & 5-item scrollable dropdown state
+    private static boolean profileRowVisibleThisFrame = false;
+    private static int customBoxX = 0;
+    private static int customBoxY = 0;
+    private static EditBox underlyingProfileBox = null;
+    private static Button underlyingExportButton = null;
     private static boolean dropdownExpanded = false;
-    private static boolean wasProfileBoxFocused = false;
-    private static Field buttonOnPressField = null;
-    private static boolean searchedOnPressField = false;
+    private static int dropdownScrollOffset = 0;
+
+    private static Method fillMethod = null;
+    private static Method textMethod = null;
+    private static boolean searchedDrawMethods = false;
 
     private final Screen parent;
 
@@ -90,9 +102,9 @@ public class AunConfigScreen extends Screen {
         AunConfigManager.ensureProfileFoldersExist();
         AunConfig real = AunConfigManager.getRealConfig();
         initialProfileModeOnOpen = real.profile != null ? real.profile.profileMode : AunConfig.ProfileMode.DEFAULT;
-        trackedScreen = null;
-        cachedProfileBox = null;
         dropdownExpanded = false;
+        dropdownScrollOffset = 0;
+        profileRowVisibleThisFrame = false;
 
         String[] classes = {
             "me.shedaniel.autoconfig.AutoConfigClient",
@@ -114,36 +126,334 @@ public class AunConfigScreen extends Screen {
         return screen != null && screen.getClass().getName().toLowerCase(Locale.ROOT).contains("clothconfig");
     }
 
-    public static void registerOverlayWidgets(Screen screen, Button arrowBtn, List<Button> itemBtns) {
-        trackedScreen = screen;
-        arrowDropdownBtn = arrowBtn;
-        dropdownItemButtons.clear();
-        dropdownItemButtons.addAll(itemBtns);
+    public static void registerBottomButtons(Button browseBtn, Button saveBtn) {
+        ourBrowseButton = browseBtn;
+        ourSaveButton = saveBtn;
         dropdownExpanded = false;
-        cachedProfileBox = null;
+        dropdownScrollOffset = 0;
     }
 
-    public static void toggleDropdownList() {
-        dropdownExpanded = !dropdownExpanded;
-    }
-
-    public static void selectProfileFromDropdown(Screen screen, int index) {
-        List<String> files = listLoadableProfileFiles();
-        if (index >= 0 && index < files.size()) {
-            String chosenName = files.get(index);
+    public static void tickClothConfigScreen(Screen screen) {
+        if (!isClothConfigScreen(screen)) {
             dropdownExpanded = false;
-            if (cachedProfileBox != null) {
-                cachedProfileBox.setValue(chosenName);
-            }
-            AunConfig cfg = AunConfigManager.getRealConfig();
-            if (cfg.profile != null) {
-                cfg.profile.customProfilePath = chosenName;
-                cfg.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
-                initialProfileModeOnOpen = AunConfig.ProfileMode.OWN_PROFILE;
-            }
-            Path file = getLoadableProfilesDir().resolve(chosenName);
-            loadProfileFromFile(file, chosenName, screen);
+            profileRowVisibleThisFrame = false;
+            return;
         }
+        layoutBottomBarButtons(screen);
+    }
+
+    public static void layoutBottomBarButtons(Screen screen) {
+        int centerX = screen.width / 2;
+        int bottomY = screen.height - 26;
+
+        if (ourBrowseButton != null) {
+            ourBrowseButton.setX(centerX - 204);
+            ourBrowseButton.setY(bottomY);
+            ourBrowseButton.setWidth(80);
+        }
+        if (ourSaveButton != null) {
+            ourSaveButton.setX(centerX + 100);
+            ourSaveButton.setY(bottomY);
+            ourSaveButton.setWidth(80);
+            ourSaveButton.active = true;
+        }
+
+        for (GuiEventListener child : screen.children()) {
+            if (child instanceof Button btn && btn != ourBrowseButton && btn != ourSaveButton && btn.getY() >= screen.height - 32) {
+                String msg = btn.getMessage().getString().toLowerCase(Locale.ROOT);
+                if (msg.contains("cancel") || msg.contains("discard")) {
+                    btn.setX(centerX - 118);
+                    btn.setY(bottomY);
+                    btn.setWidth(100);
+                    btn.setMessage(Component.literal("Cancel"));
+                } else {
+                    btn.setX(centerX - 12);
+                    btn.setY(bottomY);
+                    btn.setWidth(106);
+                    btn.active = true;
+                    btn.setMessage(Component.literal("Save & Quit"));
+                }
+            }
+        }
+    }
+
+    public static void onAfterScreenRender(Screen screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (!isClothConfigScreen(screen)) return;
+        layoutBottomBarButtons(screen);
+
+        profileRowVisibleThisFrame = false;
+        underlyingProfileBox = null;
+        underlyingExportButton = null;
+
+        AbstractSelectionList<?> listWidget = findListWidget(screen);
+        if (listWidget == null) return;
+
+        Object subCatEntry = findProfileSubCategoryEntry(listWidget);
+        if (subCatEntry == null || !isSubCategoryExpanded(subCatEntry)) {
+            dropdownExpanded = false;
+            return;
+        }
+
+        List<EditBox> subBoxes = new ArrayList<>();
+        List<Button> subButtons = new ArrayList<>();
+        Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        collectSubCategoryWidgets(subCatEntry, subBoxes, subButtons, visited, 0);
+
+        if (!subBoxes.isEmpty()) {
+            underlyingProfileBox = subBoxes.get(0);
+        }
+
+        for (int i = 0; i < subButtons.size(); i++) {
+            Button b = subButtons.get(i);
+            String txt = b.getMessage().getString();
+            if (txt.contains("EXPORT")) {
+                underlyingExportButton = b;
+                b.setMessage(Component.literal("EXPORT"));
+                if (i + 1 < subButtons.size()) {
+                    Button resetBtn = subButtons.get(i + 1);
+                    if (Math.abs(resetBtn.getY() - b.getY()) <= 2) {
+                        resetBtn.visible = false;
+                        resetBtn.active = false;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (underlyingProfileBox != null) {
+            int boxY = underlyingProfileBox.getY();
+            if (boxY >= 32 && boxY <= screen.height - 42) {
+                profileRowVisibleThisFrame = true;
+                int rightEdge = underlyingProfileBox.getX() + underlyingProfileBox.getWidth();
+                customBoxX = rightEdge - WIDE_BOX_WIDTH;
+                customBoxY = boxY;
+
+                Minecraft mc = Minecraft.getInstance();
+                Font font = mc.font;
+                AunConfig realCfg = AunConfigManager.getRealConfig();
+                String currentProfileName = (realCfg.profile != null && realCfg.profile.customProfilePath != null && !realCfg.profile.customProfilePath.isBlank())
+                        ? realCfg.profile.customProfilePath
+                        : underlyingProfileBox.getValue();
+                if (currentProfileName == null || currentProfileName.isBlank()) {
+                    currentProfileName = "default_profile.json";
+                }
+
+                // Draw wide 240px black box (fits 32+ characters easily) with selectable arrow on the left
+                boolean hoveredBox = mouseX >= customBoxX && mouseX < customBoxX + WIDE_BOX_WIDTH
+                        && mouseY >= customBoxY && mouseY < customBoxY + 20;
+                int borderColor = (hoveredBox || dropdownExpanded) ? 0xFFFFFFFF : 0xFFA0A0A0;
+
+                drawRect(graphics, customBoxX - 1, customBoxY - 1, customBoxX + WIDE_BOX_WIDTH + 1, customBoxY + 20, borderColor);
+                drawRect(graphics, customBoxX, customBoxY, customBoxX + WIDE_BOX_WIDTH, customBoxY + 19, 0xFF000000);
+
+                // Selectable arrow compartment on the left side of the box
+                drawRect(graphics, customBoxX + 19, customBoxY, customBoxX + 20, customBoxY + 19, borderColor);
+                String arrowSymbol = dropdownExpanded ? "▲" : "▼";
+                drawString(graphics, font, arrowSymbol, customBoxX + 6, customBoxY + 6, 0xFFFFFFFF);
+
+                // Profile name (up to 35+ characters visible)
+                String visibleName = font.plainSubstrByWidth(currentProfileName, WIDE_BOX_WIDTH - 28);
+                drawString(graphics, font, visibleName, customBoxX + 25, customBoxY + 6, 0xFFFFFFFF);
+
+                // Render 5-item scrollable dropdown overlay if open
+                if (dropdownExpanded) {
+                    List<String> files = listLoadableProfileFiles();
+                    int maxScroll = Math.max(0, files.size() - MAX_VISIBLE_PROFILES);
+                    if (dropdownScrollOffset > maxScroll) dropdownScrollOffset = maxScroll;
+                    if (dropdownScrollOffset < 0) dropdownScrollOffset = 0;
+
+                    int visibleCount = Math.min(MAX_VISIBLE_PROFILES, files.size());
+                    int dropTop = customBoxY + 21;
+                    int dropHeight = visibleCount * 18 + 2;
+
+                    drawRect(graphics, customBoxX - 1, dropTop - 1, customBoxX + WIDE_BOX_WIDTH + 1, dropTop + dropHeight + 1, 0xFFFFFFFF);
+                    drawRect(graphics, customBoxX, dropTop, customBoxX + WIDE_BOX_WIDTH, dropTop + dropHeight, 0xFF101010);
+
+                    for (int i = 0; i < visibleCount; i++) {
+                        int fileIdx = dropdownScrollOffset + i;
+                        String fileName = files.get(fileIdx);
+                        int itemY = dropTop + 1 + i * 18;
+                        boolean itemHovered = mouseX >= customBoxX && mouseX < customBoxX + WIDE_BOX_WIDTH
+                                && mouseY >= itemY && mouseY < itemY + 18;
+                        if (itemHovered) {
+                            drawRect(graphics, customBoxX + 1, itemY, customBoxX + WIDE_BOX_WIDTH - 6, itemY + 18, 0xFF383838);
+                        }
+                        String trimmedFile = font.plainSubstrByWidth(fileName, WIDE_BOX_WIDTH - 16);
+                        drawString(graphics, font, trimmedFile, customBoxX + 6, itemY + 5, 0xFFFFFFFF);
+                    }
+
+                    // Draw scrollbar on the right edge if there are more than 5 files
+                    if (files.size() > MAX_VISIBLE_PROFILES) {
+                        int trackX = customBoxX + WIDE_BOX_WIDTH - 5;
+                        int trackTop = dropTop + 1;
+                        int trackHeight = visibleCount * 18;
+                        drawRect(graphics, trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF2A2A2A);
+                        int thumbHeight = Math.max(12, (trackHeight * MAX_VISIBLE_PROFILES) / files.size());
+                        int thumbY = trackTop + ((trackHeight - thumbHeight) * dropdownScrollOffset) / maxScroll;
+                        drawRect(graphics, trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFFD0D0D0);
+                    }
+                }
+            }
+        }
+    }
+
+    public static boolean onClothScreenMouseClicked(Screen screen, double mouseX, double mouseY, int button) {
+        if (!isClothConfigScreen(screen) || button != 0) return false;
+
+        if (dropdownExpanded && profileRowVisibleThisFrame) {
+            List<String> files = listLoadableProfileFiles();
+            int visibleCount = Math.min(MAX_VISIBLE_PROFILES, files.size());
+            int dropTop = customBoxY + 21;
+            int dropHeight = visibleCount * 18 + 2;
+
+            if (mouseX >= customBoxX && mouseX <= customBoxX + WIDE_BOX_WIDTH
+                    && mouseY >= dropTop && mouseY <= dropTop + dropHeight) {
+                int clickedIdx = (int) ((mouseY - (dropTop + 1)) / 18);
+                int fileIdx = dropdownScrollOffset + clickedIdx;
+                if (fileIdx >= 0 && fileIdx < files.size()) {
+                    String chosen = files.get(fileIdx);
+                    dropdownExpanded = false;
+                    if (underlyingProfileBox != null) {
+                        underlyingProfileBox.setValue(chosen);
+                    }
+                    AunConfig cfg = AunConfigManager.getRealConfig();
+                    if (cfg.profile != null) {
+                        cfg.profile.customProfilePath = chosen;
+                        cfg.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
+                        initialProfileModeOnOpen = AunConfig.ProfileMode.OWN_PROFILE;
+                    }
+                    loadProfileFromFile(getLoadableProfilesDir().resolve(chosen), chosen, screen);
+                }
+                return true;
+            }
+
+            dropdownExpanded = false;
+            return true;
+        }
+
+        if (profileRowVisibleThisFrame) {
+            if (mouseX >= customBoxX && mouseX <= customBoxX + WIDE_BOX_WIDTH
+                    && mouseY >= customBoxY && mouseY <= customBoxY + 20) {
+                dropdownExpanded = !dropdownExpanded;
+                return true;
+            }
+        }
+
+        if (underlyingExportButton != null && underlyingExportButton.visible
+                && mouseX >= underlyingExportButton.getX()
+                && mouseX <= underlyingExportButton.getX() + underlyingExportButton.getWidth()
+                && mouseY >= underlyingExportButton.getY()
+                && mouseY <= underlyingExportButton.getY() + underlyingExportButton.getHeight()) {
+            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(screen));
+            return true;
+        }
+
+        return false;
+    }
+
+    public static boolean onClothScreenMouseScrolled(Screen screen, double mouseX, double mouseY, double scrollY) {
+        if (!isClothConfigScreen(screen) || !dropdownExpanded || !profileRowVisibleThisFrame) return false;
+        List<String> files = listLoadableProfileFiles();
+        int maxScroll = Math.max(0, files.size() - MAX_VISIBLE_PROFILES);
+        int delta = scrollY > 0 ? -1 : (scrollY < 0 ? 1 : 0);
+        dropdownScrollOffset = Math.max(0, Math.min(maxScroll, dropdownScrollOffset + delta));
+        return true;
+    }
+
+    private static Object findProfileSubCategoryEntry(AbstractSelectionList<?> listWidget) {
+        for (Object entry : listWidget.children()) {
+            if (entry != null && entry.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("subcategory")) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSubCategoryExpanded(Object subCatEntry) {
+        try {
+            Method m = subCatEntry.getClass().getMethod("isExpanded");
+            Object r = m.invoke(subCatEntry);
+            if (r instanceof Boolean b) return b;
+        } catch (Throwable ignored) {}
+        return true;
+    }
+
+    private static void collectSubCategoryWidgets(Object obj, List<EditBox> boxes, List<Button> buttons, Set<Object> visited, int depth) {
+        if (obj == null || depth > 5 || !visited.add(obj)) return;
+        if (obj instanceof EditBox eb) {
+            eb.setMaxLength(64);
+            boxes.add(eb);
+            return;
+        }
+        if (obj instanceof Button btn) {
+            buttons.add(btn);
+            return;
+        }
+        if (obj instanceof Collection<?> col) {
+            for (Object item : col) {
+                collectSubCategoryWidgets(item, boxes, buttons, visited, depth + 1);
+            }
+            return;
+        }
+        Class<?> cls = obj.getClass();
+        if (!cls.getName().toLowerCase(Locale.ROOT).contains("clothconfig")) return;
+        while (cls != null && cls != Object.class) {
+            for (Field f : cls.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers())) continue;
+                Class<?> ft = f.getType();
+                if (EditBox.class.isAssignableFrom(ft)
+                        || Button.class.isAssignableFrom(ft)
+                        || Collection.class.isAssignableFrom(ft)
+                        || ft.getName().toLowerCase(Locale.ROOT).contains("clothconfig")) {
+                    try {
+                        f.setAccessible(true);
+                        collectSubCategoryWidgets(f.get(obj), boxes, buttons, visited, depth + 1);
+                    } catch (Throwable ignored) {}
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+    }
+
+    private static void ensureDrawMethods(GuiGraphicsExtractor g) {
+        if (!searchedDrawMethods) {
+            searchedDrawMethods = true;
+            try { fillMethod = g.getClass().getMethod("fill", int.class, int.class, int.class, int.class, int.class); }
+            catch (Throwable ignored) {}
+            try { textMethod = g.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class); }
+            catch (Throwable ignored) {}
+        }
+    }
+
+    private static void drawRect(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color) {
+        ensureDrawMethods(g);
+        if (fillMethod != null) {
+            try { fillMethod.invoke(g, x1, y1, x2, y2, color); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static void drawString(GuiGraphicsExtractor g, Font font, String text, int x, int y, int color) {
+        ensureDrawMethods(g);
+        if (textMethod != null) {
+            try { textMethod.invoke(g, font, text, x, y, color, false); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static AbstractSelectionList<?> findListWidget(Screen screen) {
+        Class<?> cls = screen.getClass();
+        while (cls != null && cls != Object.class) {
+            for (Field f : cls.getDeclaredFields()) {
+                if (AbstractSelectionList.class.isAssignableFrom(f.getType())) {
+                    try {
+                        f.setAccessible(true);
+                        Object v = f.get(screen);
+                        if (v instanceof AbstractSelectionList<?> list) return list;
+                    } catch (Throwable ignored) {}
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+        return null;
     }
 
     private static void invokeClothSaveAll(Screen clothScreen) {
@@ -177,135 +487,25 @@ public class AunConfigScreen extends Screen {
         } catch (Throwable ignored) {}
     }
 
-    public static void tickClothConfigScreen(Screen screen) {
-        if (!isClothConfigScreen(screen)) {
-            trackedScreen = null;
-            dropdownExpanded = false;
-            return;
-        }
+    public static void exportProfileWithCustomName(Screen clothScreen, String rawName) {
+        invokeClothSaveAll(clothScreen);
+        AunConfig cfg = AunConfigManager.getRealConfig();
+        cfg.syncMirrors();
+        try {
+            AutoConfig.getConfigHolder(AunConfig.class).save();
+        } catch (Throwable ignored) {}
 
-        // Layout bottom buttons with a clean 6px gap and keep Save & Quit always clickable
-        for (GuiEventListener child : screen.children()) {
-            if (child instanceof Button btn && btn.getY() >= screen.height - 32) {
-                String msg = btn.getMessage().getString().toLowerCase(Locale.ROOT);
-                if (msg.contains("cancel") || msg.contains("discard")) {
-                    btn.setX(screen.width / 2 - 114);
-                    btn.setWidth(110);
-                } else if (msg.contains("save") && !msg.equals("save") && !msg.contains("saved")) {
-                    btn.setX(screen.width / 2 + 4);
-                    btn.setWidth(114);
-                    btn.active = true;
-                }
+        try {
+            Path exportedDir = getExportedProfilesDir();
+            String cleanName = (rawName == null || rawName.isBlank()) ? "my_profile" : rawName.trim();
+            cleanName = cleanName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            if (!cleanName.toLowerCase(Locale.ROOT).endsWith(".json")) {
+                cleanName = cleanName + ".json";
             }
-        }
-
-        List<EditBox> allBoxes = new ArrayList<>();
-        List<Button> allButtons = new ArrayList<>();
-        collectWidgetsRecursive(screen, allBoxes, allButtons);
-
-        // Hook the Export Profile button inside the Profile sub-category
-        for (int i = 0; i < allButtons.size(); i++) {
-            Button b = allButtons.get(i);
-            String txt = b.getMessage().getString();
-            if (txt.contains("EXPORT_PROFILE")) {
-                b.setMessage(Component.literal("§dExport Profile"));
-                replaceButtonOnPress(b, btn -> {
-                    exportOwnProfile(screen);
-                    btn.setMessage(Component.literal("§aExported!"));
-                });
-                if (i + 1 < allButtons.size()) {
-                    Button resetBtn = allButtons.get(i + 1);
-                    if (resetBtn.getY() == b.getY()) {
-                        resetBtn.visible = false;
-                        resetBtn.active = false;
-                    }
-                }
-            }
-        }
-
-        // Find the black EditBox inside the Profile sub-category (2nd EditBox on General tab, after Toggle Keybind)
-        EditBox profileBox = null;
-        for (EditBox eb : allBoxes) {
-            if (eb.getY() > 36 && eb.getY() < screen.height - 36) {
-                String v = eb.getValue();
-                if (v != null && (v.endsWith(".json") || v.length() > 3 || allBoxes.indexOf(eb) >= 2)) {
-                    profileBox = eb;
-                    break;
-                }
-            }
-        }
-        cachedProfileBox = profileBox;
-
-        if (profileBox != null && profileBox.visible) {
-            boolean focused = profileBox.isFocused();
-            if (focused && !wasProfileBoxFocused) {
-                dropdownExpanded = true;
-            }
-            wasProfileBoxFocused = focused;
-
-            if (arrowDropdownBtn != null) {
-                arrowDropdownBtn.visible = true;
-                arrowDropdownBtn.active = true;
-                arrowDropdownBtn.setX(profileBox.getX() + profileBox.getWidth() - 18);
-                arrowDropdownBtn.setY(profileBox.getY());
-                arrowDropdownBtn.setWidth(18);
-                arrowDropdownBtn.setMessage(Component.literal(dropdownExpanded ? "§e▲" : "§b▼"));
-            }
-
-            List<String> files = listLoadableProfileFiles();
-            for (int i = 0; i < dropdownItemButtons.size(); i++) {
-                Button itemBtn = dropdownItemButtons.get(i);
-                if (dropdownExpanded && i < files.size()) {
-                    itemBtn.visible = true;
-                    itemBtn.active = true;
-                    itemBtn.setX(profileBox.getX());
-                    itemBtn.setY(profileBox.getY() + 19 + i * 18);
-                    itemBtn.setWidth(profileBox.getWidth());
-                    itemBtn.setMessage(Component.literal("§f" + files.get(i)));
-                } else {
-                    itemBtn.visible = false;
-                    itemBtn.active = false;
-                }
-            }
-        } else {
-            wasProfileBoxFocused = false;
-            if (arrowDropdownBtn != null) {
-                arrowDropdownBtn.visible = false;
-                arrowDropdownBtn.active = false;
-            }
-            for (Button itemBtn : dropdownItemButtons) {
-                itemBtn.visible = false;
-                itemBtn.active = false;
-            }
-        }
-    }
-
-    private static void collectWidgetsRecursive(GuiEventListener node, List<EditBox> boxes, List<Button> buttons) {
-        if (node instanceof EditBox eb) {
-            boxes.add(eb);
-        } else if (node instanceof Button btn) {
-            buttons.add(btn);
-        } else if (node instanceof ContainerEventHandler ceh) {
-            for (GuiEventListener child : ceh.children()) {
-                collectWidgetsRecursive(child, boxes, buttons);
-            }
-        }
-    }
-
-    private static void replaceButtonOnPress(Button btn, Button.OnPress action) {
-        if (!searchedOnPressField) {
-            searchedOnPressField = true;
-            for (Field f : Button.class.getDeclaredFields()) {
-                if (Button.OnPress.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    buttonOnPressField = f;
-                    break;
-                }
-            }
-        }
-        if (buttonOnPressField != null) {
-            try { buttonOnPressField.set(btn, action); } catch (Throwable ignored) {}
-        }
+            Path exportPath = exportedDir.resolve(cleanName).toAbsolutePath();
+            String json = GSON.toJson(cfg);
+            Files.writeString(exportPath, json, StandardCharsets.UTF_8);
+        } catch (Throwable ignored) {}
     }
 
     public static void openFolderInOS(Path folder) {
@@ -334,31 +534,6 @@ public class AunConfigScreen extends Screen {
             } else {
                 new ProcessBuilder("xdg-open", folder.toAbsolutePath().toString()).start();
             }
-        } catch (Throwable ignored) {}
-    }
-
-    public static void exportOwnProfile(Screen currentScreen) {
-        invokeClothSaveAll(currentScreen);
-        AunConfig cfg = AunConfigManager.getRealConfig();
-        cfg.syncMirrors();
-        try {
-            AutoConfig.getConfigHolder(AunConfig.class).save();
-        } catch (Throwable ignored) {}
-
-        try {
-            Path exportedDir = getExportedProfilesDir();
-            Path loadableDir = getLoadableProfilesDir();
-            String profileName = (cfg.profile != null && cfg.profile.customProfilePath != null && !cfg.profile.customProfilePath.isBlank())
-                    ? cfg.profile.customProfilePath.trim()
-                    : "aun_exported_profile.json";
-            if (!profileName.toLowerCase(Locale.ROOT).endsWith(".json")) {
-                profileName = profileName + ".json";
-            }
-            Path exportPath = exportedDir.resolve(profileName).toAbsolutePath();
-            Path loadableCopy = loadableDir.resolve(profileName).toAbsolutePath();
-            String json = GSON.toJson(cfg);
-            Files.writeString(exportPath, json, StandardCharsets.UTF_8);
-            Files.writeString(loadableCopy, json, StandardCharsets.UTF_8);
         } catch (Throwable ignored) {}
     }
 
