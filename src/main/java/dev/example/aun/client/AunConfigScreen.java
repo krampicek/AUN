@@ -2,18 +2,23 @@ package dev.example.aun.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
 import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -21,32 +26,27 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class AunConfigScreen extends Screen {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    public static final int MAX_VISIBLE_PROFILES = 5;
-    public static final int PROFILE_BOX_WIDTH = 220;
-    public static final int ARROW_BTN_WIDTH = 20;
-
     private static AunConfig.ProfileMode initialProfileModeOnOpen = null;
     private static Button ourBrowseButton = null;
     private static Button ourSaveAndQuitButton = null;
     private static Button ourSaveButton = null;
-    private static Button arrowDropdownBtn = null;
-    private static final List<Button> dropdownItemButtons = new ArrayList<>();
 
-    public static EditBox cachedProfileBox = null;
-    public static Button cachedExportButton = null;
-    public static int settingsProfileRowY = -1000;
-    public static long lastProfileBoxRenderTimeMs = 0L;
-    public static boolean dropdownExpanded = false;
-    public static int dropdownScrollOffset = 0;
+    private static Field buttonOnPressField = null;
+    private static boolean searchedOnPressField = false;
 
     private final Screen parent;
 
@@ -93,12 +93,9 @@ public class AunConfigScreen extends Screen {
     public static Screen create(Screen parent) {
         AunConfigManager.ensureProfileFoldersExist();
         AunConfig real = AunConfigManager.getRealConfig();
+        real.syncMirrors();
+        applyModLanguage(real.selectedLanguage);
         initialProfileModeOnOpen = real.profile != null ? real.profile.profileMode : AunConfig.ProfileMode.DEFAULT;
-        dropdownExpanded = false;
-        dropdownScrollOffset = 0;
-        cachedProfileBox = null;
-        cachedExportButton = null;
-        settingsProfileRowY = -1000;
 
         String[] classes = {
             "me.shedaniel.autoconfig.AutoConfigClient",
@@ -120,147 +117,165 @@ public class AunConfigScreen extends Screen {
         return screen != null && screen.getClass().getName().toLowerCase(Locale.ROOT).contains("clothconfig");
     }
 
-    public static void registerClothOverlayWidgets(
-            Button browseBtn,
-            Button saveQuitBtn,
-            Button saveBtn,
-            Button arrowBtn,
-            List<Button> itemBtns) {
+    public static void registerBottomButtons(Button browseBtn, Button saveQuitBtn, Button saveBtn) {
         ourBrowseButton = browseBtn;
         ourSaveAndQuitButton = saveQuitBtn;
         ourSaveButton = saveBtn;
-        arrowDropdownBtn = arrowBtn;
-        dropdownItemButtons.clear();
-        dropdownItemButtons.addAll(itemBtns);
-        dropdownExpanded = false;
-        dropdownScrollOffset = 0;
-        cachedProfileBox = null;
-        cachedExportButton = null;
-        settingsProfileRowY = -1000;
     }
 
-    public static boolean isProfileEditBox(Object widget) {
-        if (!(widget instanceof EditBox eb)) return false;
-        if (!isClothConfigScreen(AunClientFeatures.currentScreen)) return false;
-        if (eb == cachedProfileBox) return true;
-        String val = eb.getValue();
-        if (val != null && val.toLowerCase(Locale.ROOT).endsWith(".json")) {
-            cachedProfileBox = eb;
-            eb.setMaxLength(64);
+    public static void onButtonBuilt(Button btn) {
+        if (btn == null) return;
+        if (!searchedOnPressField) {
+            searchedOnPressField = true;
+            for (Field f : Button.class.getDeclaredFields()) {
+                if (Button.OnPress.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    buttonOnPressField = f;
+                    break;
+                }
+            }
+        }
+        if (buttonOnPressField != null) {
+            try {
+                Button.OnPress original = (Button.OnPress) buttonOnPressField.get(btn);
+                Button.OnPress wrapped = clicked -> {
+                    if (interceptClothButtonClick(clicked)) {
+                        return;
+                    }
+                    if (original != null) {
+                        original.onPress(clicked);
+                    }
+                };
+                buttonOnPressField.set(btn, wrapped);
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    public static boolean interceptClothButtonClick(Button clicked) {
+        Screen cur = AunClientFeatures.currentScreen;
+        if (!isClothConfigScreen(cur) || clicked == null) return false;
+        String text = clicked.getMessage().getString().trim();
+        if (text.equals("LINK") || text.equals("OPEN_LINK")) {
+            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LoadProfileScreen(cur));
             return true;
         }
-        if (settingsProfileRowY > 0 && eb.getY() > settingsProfileRowY + 8 && eb.getY() <= settingsProfileRowY + 42) {
-            cachedProfileBox = eb;
-            eb.setMaxLength(64);
+        if (text.equals("EXPORT") || text.equals("OPEN_EXPORT")) {
+            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(cur));
+            return true;
+        }
+        if (text.equals("LANGUAGE") || text.equals("OPEN_LANGUAGE")) {
+            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LanguageScreen(cur));
             return true;
         }
         return false;
     }
 
-    public static void onWidgetSetY(Object widget, int y) {
-        Screen screen = AunClientFeatures.currentScreen;
-        if (!isClothConfigScreen(screen)) return;
-
-        if (widget instanceof Button btn) {
-            String txt = btn.getMessage().getString().trim();
-            if (txt.equals("DEFAULT") || txt.equals("ALL_ON") || txt.equals("ALL_OFF") || txt.equals("OWN_PROFILE")) {
-                settingsProfileRowY = y;
-            } else if (txt.equals("EXPORT") || txt.equals("EXPORT_PROFILE")) {
-                cachedExportButton = btn;
-                btn.setMessage(Component.literal("EXPORT"));
-                btn.visible = !dropdownExpanded;
-            } else if (txt.equalsIgnoreCase("Reset")) {
-                if ((cachedProfileBox != null && Math.abs(y - cachedProfileBox.getY()) <= 4)
-                        || (cachedExportButton != null && Math.abs(y - cachedExportButton.getY()) <= 4)) {
-                    btn.visible = false;
-                    btn.active = false;
-                }
-            }
-        }
-
-        if (isProfileEditBox(widget)) {
-            EditBox box = (EditBox) widget;
-            lastProfileBoxRenderTimeMs = System.currentTimeMillis();
-            boolean inBounds = y >= 34 && y <= screen.height - 42;
-            if (arrowDropdownBtn != null) {
-                arrowDropdownBtn.visible = inBounds;
-                arrowDropdownBtn.active = inBounds;
-                arrowDropdownBtn.setX(box.getX() - ARROW_BTN_WIDTH);
-                arrowDropdownBtn.setY(y - 1);
-                arrowDropdownBtn.setWidth(ARROW_BTN_WIDTH);
-                arrowDropdownBtn.setMessage(Component.literal(dropdownExpanded ? "▲" : "▼"));
-            }
-            updateDropdownButtonsLayout(box.getX() - ARROW_BTN_WIDTH, y + 19, inBounds && dropdownExpanded);
-        }
-    }
-
-    public static void updateDropdownButtonsLayout(int x, int topY, boolean show) {
-        if (!show) {
-            for (Button b : dropdownItemButtons) {
-                b.visible = false;
-                b.active = false;
-            }
-            return;
-        }
-        List<String> files = listLoadableProfileFiles();
-        int maxScroll = Math.max(0, files.size() - MAX_VISIBLE_PROFILES);
-        if (dropdownScrollOffset > maxScroll) dropdownScrollOffset = maxScroll;
-        if (dropdownScrollOffset < 0) dropdownScrollOffset = 0;
-
-        for (int i = 0; i < dropdownItemButtons.size(); i++) {
-            Button b = dropdownItemButtons.get(i);
-            int fileIdx = dropdownScrollOffset + i;
-            if (i < MAX_VISIBLE_PROFILES && fileIdx < files.size()) {
-                b.visible = true;
-                b.active = true;
-                b.setX(x);
-                b.setY(topY + i * 18);
-                b.setWidth(PROFILE_BOX_WIDTH + ARROW_BTN_WIDTH);
-                b.setMessage(Component.literal(files.get(fileIdx)));
-            } else {
-                b.visible = false;
-                b.active = false;
-            }
-        }
-    }
-
     public static void tickClothConfigScreen(Screen screen) {
-        if (!isClothConfigScreen(screen)) {
-            dropdownExpanded = false;
-            return;
-        }
+        if (!isClothConfigScreen(screen)) return;
         layoutBottomBarButtons(screen);
 
-        if (System.currentTimeMillis() - lastProfileBoxRenderTimeMs > 120L) {
-            if (arrowDropdownBtn != null) {
-                arrowDropdownBtn.visible = false;
-                arrowDropdownBtn.active = false;
+        AbstractSelectionList<?> listWidget = findListWidget(screen);
+        if (listWidget == null) return;
+
+        Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        inspectEntriesRecursive(screen, listWidget.children(), visited, 0);
+    }
+
+    private static void inspectEntriesRecursive(Screen screen, Object node, Set<Object> visited, int depth) {
+        if (node == null || depth > 5 || !visited.add(node)) return;
+
+        if (node instanceof Collection<?> col) {
+            for (Object item : col) {
+                inspectEntriesRecursive(screen, item, visited, depth + 1);
             }
-            updateDropdownButtonsLayout(0, 0, false);
+            return;
+        }
+
+        // Check if this is a Cloth Config entry whose enum value was just clicked
+        try {
+            Method getVal = node.getClass().getMethod("getValue");
+            Object val = getVal.invoke(node);
+            if (val == AunConfig.LinkAction.OPEN_LINK) {
+                resetEnumEntryIndex(node);
+                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LoadProfileScreen(screen));
+                return;
+            } else if (val == AunConfig.ExportAction.OPEN_EXPORT) {
+                resetEnumEntryIndex(node);
+                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(screen));
+                return;
+            } else if (val == AunConfig.LanguageAction.OPEN_LANGUAGE) {
+                resetEnumEntryIndex(node);
+                Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen.LanguageScreen(screen));
+                return;
+            }
+            if (val instanceof AunConfig.LinkAction
+                    || val instanceof AunConfig.ExportAction
+                    || val instanceof AunConfig.LanguageAction) {
+                hideResetButtonInActionEntry(node);
+            }
+        } catch (Throwable ignored) {}
+
+        if (node instanceof ContainerEventHandler ceh) {
+            for (GuiEventListener child : ceh.children()) {
+                inspectEntriesRecursive(screen, child, visited, depth + 1);
+            }
+        }
+    }
+
+    private static void resetEnumEntryIndex(Object entry) {
+        Class<?> cls = entry.getClass();
+        while (cls != null && cls != Object.class) {
+            for (Field f : cls.getDeclaredFields()) {
+                if (f.getType() == int.class) {
+                    try {
+                        f.setAccessible(true);
+                        f.setInt(entry, 0);
+                    } catch (Throwable ignored) {}
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+    }
+
+    private static void hideResetButtonInActionEntry(Object entry) {
+        if (entry instanceof ContainerEventHandler ceh) {
+            List<Button> btns = new ArrayList<>();
+            for (GuiEventListener child : ceh.children()) {
+                if (child instanceof Button b) btns.add(b);
+            }
+            if (btns.size() >= 2) {
+                Button resetBtn = btns.get(1);
+                resetBtn.visible = false;
+                resetBtn.active = false;
+            }
         }
     }
 
     public static void layoutBottomBarButtons(Screen screen) {
         int centerX = screen.width / 2;
         int bottomY = screen.height - 26;
+        boolean cz = isCzechLanguage();
 
         if (ourBrowseButton != null) {
             ourBrowseButton.setX(centerX - 204);
             ourBrowseButton.setY(bottomY);
             ourBrowseButton.setWidth(80);
             ourBrowseButton.active = true;
+            ourBrowseButton.setMessage(Component.literal(cz ? "Procházet" : "Browse"));
         }
         if (ourSaveAndQuitButton != null) {
             ourSaveAndQuitButton.setX(centerX - 12);
             ourSaveAndQuitButton.setY(bottomY);
             ourSaveAndQuitButton.setWidth(106);
             ourSaveAndQuitButton.active = true;
+            ourSaveAndQuitButton.setMessage(Component.literal(cz ? "Uložit a odejít" : "Save & Quit"));
         }
         if (ourSaveButton != null) {
             ourSaveButton.setX(centerX + 100);
             ourSaveButton.setY(bottomY);
             ourSaveButton.setWidth(80);
             ourSaveButton.active = true;
+            ourSaveButton.setMessage(Component.literal(cz ? "Uložit" : "Save"));
         }
 
         for (GuiEventListener child : screen.children()) {
@@ -268,17 +283,14 @@ public class AunConfigScreen extends Screen {
                     && btn != ourBrowseButton
                     && btn != ourSaveAndQuitButton
                     && btn != ourSaveButton
-                    && btn != arrowDropdownBtn
-                    && !dropdownItemButtons.contains(btn)
                     && btn.getY() >= screen.height - 32) {
                 String msg = btn.getMessage().getString().toLowerCase(Locale.ROOT);
-                if (msg.contains("cancel") || msg.contains("discard")) {
+                if (msg.contains("cancel") || msg.contains("discard") || msg.contains("zrušit")) {
                     btn.setX(centerX - 118);
                     btn.setY(bottomY);
                     btn.setWidth(100);
-                    btn.setMessage(Component.literal("Cancel"));
+                    btn.setMessage(Component.literal(cz ? "Zrušit" : "Cancel"));
                 } else {
-                    // Hide Cloth Config's built-in dark Save & Quit button so our bright one is shown instead
                     btn.visible = false;
                     btn.active = false;
                 }
@@ -286,80 +298,68 @@ public class AunConfigScreen extends Screen {
         }
     }
 
-    public static boolean handleCustomMouseClick(Screen screen, double mouseX, double mouseY, int button) {
-        if (!isClothConfigScreen(screen) || button != 0) return false;
+    private static boolean isCzechLanguage() {
+        AunConfig cfg = AunConfigManager.getRealConfig();
+        return cfg.selectedLanguage != null && cfg.selectedLanguage.equalsIgnoreCase("cs_cz");
+    }
 
-        // 1. Check if clicking an open dropdown item
-        if (dropdownExpanded) {
-            for (int i = 0; i < dropdownItemButtons.size(); i++) {
-                Button itemBtn = dropdownItemButtons.get(i);
-                if (itemBtn.visible && mouseX >= itemBtn.getX() && mouseX <= itemBtn.getX() + itemBtn.getWidth()
-                        && mouseY >= itemBtn.getY() && mouseY <= itemBtn.getY() + itemBtn.getHeight()) {
-                    selectProfileFromDropdown(screen, i);
-                    return true;
+    @SuppressWarnings("unchecked")
+    public static void applyModLanguage(String langCode) {
+        String code = (langCode == null || langCode.isBlank()) ? "en_us" : langCode.trim().toLowerCase(Locale.ROOT);
+        String resourcePath = "/assets/aun/lang/" + code + ".json";
+        try (InputStream in = AunConfigScreen.class.getResourceAsStream(resourcePath)) {
+            if (in == null) return;
+            Map<String, String> modTranslations = GSON.fromJson(
+                    new InputStreamReader(in, StandardCharsets.UTF_8),
+                    new TypeToken>() {}.getType());
+            if (modTranslations == null || modTranslations.isEmpty()) return;
+
+            Language currentLang = Language.getInstance();
+            Class<?> cls = currentLang.getClass();
+            while (cls != null && cls != Object.class) {
+                for (Field f : cls.getDeclaredFields()) {
+                    if (Map.class.isAssignableFrom(f.getType())) {
+                        f.setAccessible(true);
+                        Object existingObj = f.get(currentLang);
+                        if (existingObj instanceof Map<?, ?> existingMap) {
+                            Map<String, String> merged = new HashMap<>((Map<String, String>) existingMap);
+                            merged.putAll(modTranslations);
+                            f.set(currentLang, merged);
+                            return;
+                        }
+                    }
+                }
+                cls = cls.getSuperclass();
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public static void applySelectedLanguageAndReopen(String langCode, Screen clothScreen) {
+        AunConfig cfg = AunConfigManager.getRealConfig();
+        cfg.selectedLanguage = (langCode == null || langCode.isBlank()) ? "en_us" : langCode;
+        cfg.syncMirrors();
+        try {
+            AutoConfig.getConfigHolder(AunConfig.class).save();
+        } catch (Throwable ignored) {}
+        applyModLanguage(cfg.selectedLanguage);
+        reopenClothScreen(clothScreen);
+    }
+
+    private static AbstractSelectionList<?> findListWidget(Screen screen) {
+        Class<?> cls = screen.getClass();
+        while (cls != null && cls != Object.class) {
+            for (Field f : cls.getDeclaredFields()) {
+                if (AbstractSelectionList.class.isAssignableFrom(f.getType())) {
+                    try {
+                        f.setAccessible(true);
+                        Object v = f.get(screen);
+                        if (v instanceof AbstractSelectionList<?> list) return list;
+                    } catch (Throwable ignored) {}
                 }
             }
+            cls = cls.getSuperclass();
         }
-
-        // 2. Check if clicking the ▼ arrow button
-        if (arrowDropdownBtn != null && arrowDropdownBtn.visible
-                && mouseX >= arrowDropdownBtn.getX() && mouseX <= arrowDropdownBtn.getX() + arrowDropdownBtn.getWidth()
-                && mouseY >= arrowDropdownBtn.getY() && mouseY <= arrowDropdownBtn.getY() + 20) {
-            dropdownExpanded = !dropdownExpanded;
-            if (cachedProfileBox != null) {
-                updateDropdownButtonsLayout(cachedProfileBox.getX() - ARROW_BTN_WIDTH, cachedProfileBox.getY() + 19, dropdownExpanded);
-            }
-            return true;
-        }
-
-        // If dropdown was open and user clicked elsewhere, close dropdown
-        if (dropdownExpanded) {
-            dropdownExpanded = false;
-            updateDropdownButtonsLayout(0, 0, false);
-            return true;
-        }
-
-        // 3. Check if clicking the EXPORT button
-        if (cachedExportButton != null && cachedExportButton.visible
-                && mouseX >= cachedExportButton.getX() && mouseX <= cachedExportButton.getX() + cachedExportButton.getWidth()
-                && mouseY >= cachedExportButton.getY() && mouseY <= cachedExportButton.getY() + 20) {
-            Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(screen));
-            return true;
-        }
-
-        return false;
-    }
-
-    public static boolean onClothScreenMouseScrolled(Screen screen, double mouseX, double mouseY, double scrollY) {
-        if (!isClothConfigScreen(screen) || !dropdownExpanded) return false;
-        List<String> files = listLoadableProfileFiles();
-        int maxScroll = Math.max(0, files.size() - MAX_VISIBLE_PROFILES);
-        int delta = scrollY > 0 ? -1 : (scrollY < 0 ? 1 : 0);
-        dropdownScrollOffset = Math.max(0, Math.min(maxScroll, dropdownScrollOffset + delta));
-        if (cachedProfileBox != null) {
-            updateDropdownButtonsLayout(cachedProfileBox.getX() - ARROW_BTN_WIDTH, cachedProfileBox.getY() + 19, true);
-        }
-        return true;
-    }
-
-    public static void selectProfileFromDropdown(Screen screen, int visibleSlotIndex) {
-        List<String> files = listLoadableProfileFiles();
-        int fileIdx = dropdownScrollOffset + visibleSlotIndex;
-        if (fileIdx >= 0 && fileIdx < files.size()) {
-            String chosen = files.get(fileIdx);
-            dropdownExpanded = false;
-            updateDropdownButtonsLayout(0, 0, false);
-            if (cachedProfileBox != null) {
-                cachedProfileBox.setValue(chosen);
-            }
-            AunConfig cfg = AunConfigManager.getRealConfig();
-            if (cfg.profile != null) {
-                cfg.profile.customProfilePath = chosen;
-                cfg.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
-                initialProfileModeOnOpen = AunConfig.ProfileMode.OWN_PROFILE;
-            }
-            loadProfileFromFile(getLoadableProfilesDir().resolve(chosen), chosen, screen);
-        }
+        return null;
     }
 
     private static void invokeClothSaveAll(Screen clothScreen) {
@@ -470,10 +470,12 @@ public class AunConfigScreen extends Screen {
         } else if (cfg.profile.profileMode == AunConfig.ProfileMode.DEFAULT) {
             boolean keepModEnabled = cfg.general.modEnabled;
             String keepToggleKey = cfg.general.toggleKey;
+            String keepLang = cfg.selectedLanguage;
             AunConfig def = new AunConfig();
             copyConfigValues(def, cfg);
             cfg.general.modEnabled = keepModEnabled;
             cfg.general.toggleKey = keepToggleKey;
+            cfg.selectedLanguage = keepLang;
             cfg.profile.profileMode = AunConfig.ProfileMode.DEFAULT;
         } else if (cfg.profile.profileMode == AunConfig.ProfileMode.OWN_PROFILE) {
             if (cfg.profile.customProfilePath != null && !cfg.profile.customProfilePath.isBlank()) {
@@ -510,7 +512,9 @@ public class AunConfigScreen extends Screen {
                 AunConfig loaded = GSON.fromJson(json, AunConfig.class);
                 if (loaded != null) {
                     AunConfig current = AunConfigManager.getRealConfig();
+                    String keepLang = current.selectedLanguage;
                     copyConfigValues(loaded, current);
+                    current.selectedLanguage = keepLang;
                     if (current.profile != null) {
                         current.profile.customProfilePath = displayFileName;
                         current.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
@@ -519,9 +523,11 @@ public class AunConfigScreen extends Screen {
                     current.syncMirrors();
                     AutoConfig.getConfigHolder(AunConfig.class).save();
                     reopenClothScreen(currentScreen);
+                    return;
                 }
             }
         } catch (Throwable ignored) {}
+        Minecraft.getInstance().setScreenAndShow(currentScreen);
     }
 
     private static Screen findParentScreen(Screen currentScreen) {
