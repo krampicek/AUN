@@ -41,6 +41,9 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean autoPickup = true;
         @ConfigEntry.Gui.Tooltip public boolean autoClimbLadders = true;
         @ConfigEntry.Gui.Tooltip public boolean autoTotem = true;
+        @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
+        @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
+        @ConfigEntry.Gui.Tooltip public boolean simpleHarvest = true;
     }
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
@@ -52,6 +55,7 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean hideArmor = true;
         @ConfigEntry.Gui.Tooltip public boolean raisedHotbar = true;
         @ConfigEntry.Gui.Tooltip public boolean headLocator = true;
+        @ConfigEntry.Gui.Tooltip public boolean locatorBarCombination = true;
         @ConfigEntry.Gui.Tooltip public boolean chatHeads = true;
         @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesFirstPerson = true;
         @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesThirdPerson = true;
@@ -103,10 +107,7 @@ public class AunConfig implements ConfigData {
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean cutThrough = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean doubleDoors = true;
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean simpleHarvest = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastLeafDecay = true;
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fullbright = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public String fullbrightKey = "H";
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean facingPlacement = true;
@@ -151,6 +152,8 @@ public class AunConfig implements ConfigData {
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
     public EssentialConfig essential = new EssentialConfig();
     public static class EssentialConfig {
+        @ConfigEntry.Gui.Tooltip public boolean glowingTrims = true;
+        @ConfigEntry.Gui.Tooltip public boolean coralReborn = true;
         @ConfigEntry.Gui.Tooltip public boolean hideBeaconBeamBehindTintedGlass = true;
         @ConfigEntry.Gui.Tooltip public boolean noBatSpawning = true;
         @ConfigEntry.Gui.Tooltip public boolean anvilNoTooExpensive = true;
@@ -181,10 +184,10 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip public boolean noAnimalTemptDelay = true;
     }
 
-    // ============= EXCLUDED MIRRORS (WITH CATEGORY TO PREVENT category.default) =============
+    // ============= EXCLUDED MIRRORS =============
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient PlayerHudConfig hud = new PlayerHudConfig();
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient String zoomKey = "C", happyGhastBoost = "100", happyGhastHorizontalBoost = "100", happyGhastVerticalBoost = "100";
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient boolean clearWater = true, clearLava = true, clearPowderSnow = true, favouriteWorlds = true, worldPlaytimeDisplay = true, deletedWorldProtection = true, reachBehind = true, reachBehindSign = true, armorStandSwap = true, horseInfo = false, dismountOnClick = true, autoPickup = true, autoClimbLadders = true, autoTotem = true, stackRefill = true, betterF1 = true, disableNarrator = true, disableAdvancementKeybind = true, ctrlDropAllSameItems = true, bundleFix = true, moreChatHistory = true, hideArmor = true, centralCrosshair = true, raisedHotbar = true, chatTextCopy = true, headLocator = true, recipeBookOrigin = true, chatHeads = true, hideOwnParticlesFirstPerson = true, hideOwnParticlesThirdPerson = true, bookScroll = true, zoom = true, dynamicLights = true, chestSearchBar = true, netherCalc = true, noResourcePackWarning = true, fastLanguageReload = true, fastQuit = true, fadelessLoading = true, borderlessFullscreen = true, safeLightning = true, noZombieDoorBreak = true, noCropTrampleFeatherFalling = true, noCropTrampleMobs = true, instaMineGlass = true, instaMineDeepslateWithHaste = true, speedHappyGhast = true, hideBeaconBeamBehindTintedGlass = true, noBatSpawning = true, anvilNoTooExpensive = true, playerDropsNeverDespawn = true, infiniteVillagerTrading = true, enchantThroughFoliage = true, trueVanillaGamemodeLock = false, enderPearlFix = true, stackedMinecartFix = true, rocketElytraFix = true, netherPortalFix = true, piglinPortalFix = true, safeRedstone = true, noAnimalTemptDelay = true;
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient boolean clearWater = true, clearLava = true, clearPowderSnow = true, favouriteWorlds = true, worldPlaytimeDisplay = true, deletedWorldProtection = true, reachBehind = true, reachBehindSign = true, armorStandSwap = true, horseInfo = false, dismountOnClick = true, autoPickup = true, autoClimbLadders = true, autoTotem = true, closeCall = true, autoToolSwitch = true, simpleHarvest = true, stackRefill = true, betterF1 = true, disableNarrator = true, disableAdvancementKeybind = true, ctrlDropAllSameItems = true, bundleFix = true, moreChatHistory = true, hideArmor = true, centralCrosshair = true, raisedHotbar = true, chatTextCopy = true, headLocator = true, locatorBarCombination = true, recipeBookOrigin = true, chatHeads = true, hideOwnParticlesFirstPerson = true, hideOwnParticlesThirdPerson = true, bookScroll = true, zoom = true, dynamicLights = true, chestSearchBar = true, netherCalc = true, noResourcePackWarning = true, fastLanguageReload = true, fastQuit = true, fadelessLoading = true, borderlessFullscreen = true, safeLightning = true, noZombieDoorBreak = true, noCropTrampleFeatherFalling = true, noCropTrampleMobs = true, instaMineGlass = true, instaMineDeepslateWithHaste = true, speedHappyGhast = true, glowingTrims = true, coralReborn = true, hideBeaconBeamBehindTintedGlass = true, noBatSpawning = true, anvilNoTooExpensive = true, playerDropsNeverDespawn = true, infiniteVillagerTrading = true, enchantThroughFoliage = true, trueVanillaGamemodeLock = false, enderPearlFix = true, stackedMinecartFix = true, rocketElytraFix = true, netherPortalFix = true, piglinPortalFix = true, safeRedstone = true, noAnimalTemptDelay = true;
 
     @Override public void validatePostLoad() { syncMirrors(); }
 
@@ -192,15 +195,15 @@ public class AunConfig implements ConfigData {
         if (clearVision != null) { clearWater = clearVision.clearWater; clearLava = clearVision.clearLava; clearPowderSnow = clearVision.clearPowderSnow; }
         if (worldSettings != null) { favouriteWorlds = worldSettings.favouriteWorlds; worldPlaytimeDisplay = worldSettings.worldPlaytimeDisplay; deletedWorldProtection = worldSettings.deletedWorldProtection; }
         if (entities != null) { reachBehind = entities.reachBehind; reachBehindSign = entities.reachBehindSign; armorStandSwap = entities.armorStandSwap; horseInfo = false; dismountOnClick = entities.dismountOnClick; }
-        if (autoSettings != null) { autoPickup = autoSettings.autoPickup; autoClimbLadders = autoSettings.autoClimbLadders; autoTotem = autoSettings.autoTotem; }
-        if (playerHud != null) { hud = playerHud; stackRefill = playerHud.stackRefill; betterF1 = playerHud.betterF1; bundleFix = playerHud.bundleFix; hideArmor = playerHud.hideArmor; raisedHotbar = playerHud.raisedHotbar; headLocator = playerHud.headLocator; chatHeads = playerHud.chatHeads; hideOwnParticlesFirstPerson = playerHud.hideOwnParticlesFirstPerson; hideOwnParticlesThirdPerson = playerHud.hideOwnParticlesThirdPerson; centralCrosshair = playerHud.centralCrosshair; }
+        if (autoSettings != null) { autoPickup = autoSettings.autoPickup; autoClimbLadders = autoSettings.autoClimbLadders; autoTotem = autoSettings.autoTotem; closeCall = autoSettings.closeCall; autoToolSwitch = autoSettings.autoToolSwitch; simpleHarvest = autoSettings.simpleHarvest; }
+        if (playerHud != null) { hud = playerHud; stackRefill = playerHud.stackRefill; betterF1 = playerHud.betterF1; bundleFix = playerHud.bundleFix; hideArmor = playerHud.hideArmor; raisedHotbar = playerHud.raisedHotbar; headLocator = playerHud.headLocator; locatorBarCombination = playerHud.locatorBarCombination; chatHeads = playerHud.chatHeads; hideOwnParticlesFirstPerson = playerHud.hideOwnParticlesFirstPerson; hideOwnParticlesThirdPerson = playerHud.hideOwnParticlesThirdPerson; centralCrosshair = playerHud.centralCrosshair; }
         if (remainingHuds != null) { disableNarrator = remainingHuds.disableNarrator; disableAdvancementKeybind = remainingHuds.disableAdvancementKeybind; ctrlDropAllSameItems = remainingHuds.ctrlDropAllSameItems; moreChatHistory = remainingHuds.moreChatHistory; chatTextCopy = remainingHuds.chatTextCopy; recipeBookOrigin = remainingHuds.recipeBookOrigin; bookScroll = remainingHuds.bookScroll; zoom = remainingHuds.zoom; zoomKey = remainingHuds.zoomKey; dynamicLights = remainingHuds.dynamicLights; chestSearchBar = remainingHuds.chestSearchBar; }
         if (commands != null) { netherCalc = commands.netherCalc; }
         if (screenSettings != null) { noResourcePackWarning = screenSettings.noResourcePackWarning; fastLanguageReload = screenSettings.fastLanguageReload; fastQuit = screenSettings.fastQuit; fadelessLoading = screenSettings.fadelessLoading; borderlessFullscreen = screenSettings.borderlessFullscreen; }
         if (mobGriefing != null) { safeLightning = mobGriefing.safeLightning; noZombieDoorBreak = mobGriefing.noZombieDoorBreak; noCropTrampleFeatherFalling = mobGriefing.noCropTrampleFeatherFalling; noCropTrampleMobs = mobGriefing.noCropTrampleMobs; }
         if (instaMine != null) { instaMineGlass = instaMine.instaMineGlass; instaMineDeepslateWithHaste = instaMine.instaMineDeepslateWithHaste; }
         if (happyGhast != null) { speedHappyGhast = happyGhast.speedHappyGhast; happyGhastHorizontalBoost = happyGhast.happyGhastHorizontalBoost; happyGhastVerticalBoost = happyGhast.happyGhastVerticalBoost; happyGhastBoost = happyGhast.happyGhastHorizontalBoost; }
-        if (essential != null) { hideBeaconBeamBehindTintedGlass = essential.hideBeaconBeamBehindTintedGlass; noBatSpawning = essential.noBatSpawning; anvilNoTooExpensive = essential.anvilNoTooExpensive; playerDropsNeverDespawn = essential.playerDropsNeverDespawn; infiniteVillagerTrading = essential.infiniteVillagerTrading; enchantThroughFoliage = essential.enchantThroughFoliage; trueVanillaGamemodeLock = essential.trueVanillaGamemodeLock; }
+        if (essential != null) { glowingTrims = essential.glowingTrims; coralReborn = essential.coralReborn; hideBeaconBeamBehindTintedGlass = essential.hideBeaconBeamBehindTintedGlass; noBatSpawning = essential.noBatSpawning; anvilNoTooExpensive = essential.anvilNoTooExpensive; playerDropsNeverDespawn = essential.playerDropsNeverDespawn; infiniteVillagerTrading = essential.infiniteVillagerTrading; enchantThroughFoliage = essential.enchantThroughFoliage; trueVanillaGamemodeLock = essential.trueVanillaGamemodeLock; }
         if (mcBugs != null) { enderPearlFix = mcBugs.enderPearlFix; stackedMinecartFix = mcBugs.stackedMinecartFix; rocketElytraFix = mcBugs.rocketElytraFix; netherPortalFix = mcBugs.netherPortalFix; }
         if (otherFixes != null) { piglinPortalFix = otherFixes.piglinPortalFix; safeRedstone = otherFixes.safeRedstone; noAnimalTemptDelay = otherFixes.noAnimalTemptDelay; }
     }
