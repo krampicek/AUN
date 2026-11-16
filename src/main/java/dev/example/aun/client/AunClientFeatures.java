@@ -15,6 +15,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -39,6 +41,14 @@ public final class AunClientFeatures {
     private static Boolean lastNetherCalcState = null;
     private static BlockPos lastAccuratePlaceTarget = null, lastLightBlockPos = null;
     private static Method setSectionDirtyMethod = null;
+
+    // Smooth Scrollable Zoom State
+    private static float targetZoomMultiplier = 0.25F;
+    private static float currentZoomMultiplier = 1.0F;
+    private static long lastZoomFrameTimeNs = 0L;
+    private static int lockedHotbarSlot = -1;
+    private static Field selectedSlotField = null;
+    private static boolean searchedSelectedSlotField = false;
 
     public static Screen currentScreen = null;
     public static boolean inLocalPlayerTickEffects = false, inGuiHudRender = false;
@@ -116,23 +126,83 @@ public final class AunClientFeatures {
         return cachedToggleGuiKey;
     }
 
+    private static Field getInventorySelectedField() {
+        if (!searchedSelectedSlotField) {
+            searchedSelectedSlotField = true;
+            for (Field f : Inventory.class.getDeclaredFields()) {
+                if (f.getType() == int.class && !java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                    f.setAccessible(true);
+                    selectedSlotField = f;
+                    break;
+                }
+            }
+        }
+        return selectedSlotField;
+    }
+
+    public static void updateZoomFrameAndScrollLock() {
+        Minecraft mc = Minecraft.getInstance();
+        boolean zoomingNow = isZooming();
+        if (mc != null && mc.player != null) {
+            Field selField = getInventorySelectedField();
+            if (selField != null) {
+                try {
+                    int curSlot = selField.getInt(mc.player.getInventory());
+                    if (zoomingNow) {
+                        if (lockedHotbarSlot == -1) {
+                            lockedHotbarSlot = curSlot;
+                        } else if (curSlot != lockedHotbarSlot) {
+                            int diff = curSlot - lockedHotbarSlot;
+                            if (diff > 4) diff -= 9;
+                            else if (diff < -4) diff += 9;
+                            selField.setInt(mc.player.getInventory(), lockedHotbarSlot);
+                            // Scroll up (diff < 0) zooms in closer; scroll down zooms out
+                            if (diff < 0) targetZoomMultiplier = Math.max(0.04F, targetZoomMultiplier * 0.82F);
+                            else targetZoomMultiplier = Math.min(0.85F, targetZoomMultiplier * 1.22F);
+                        }
+                    } else {
+                        lockedHotbarSlot = -1;
+                        targetZoomMultiplier = 0.25F;
+                    }
+                } catch (ReflectiveOperationException ignored) {}
+            }
+        } else {
+            lockedHotbarSlot = -1;
+        }
+
+        long now = System.nanoTime();
+        float dt = lastZoomFrameTimeNs == 0L ? 0.016F : Math.min(0.1F, (now - lastZoomFrameTimeNs) / 1_000_000_000.0F);
+        lastZoomFrameTimeNs = now;
+        float goal = zoomingNow ? targetZoomMultiplier : 1.0F;
+        float speed = 14.0F * dt;
+        currentZoomMultiplier = Mth.lerp(Math.min(1.0F, speed), currentZoomMultiplier, goal);
+        if (Math.abs(currentZoomMultiplier - goal) < 0.002F) {
+            currentZoomMultiplier = goal;
+        }
+    }
+
+    public static float getSmoothZoomMultiplier() {
+        updateZoomFrameAndScrollLock();
+        return currentZoomMultiplier;
+    }
+
     private static void onStartTick(Minecraft client) {
         AunConfig cfg = AunConfigManager.get();
         cfg.syncMirrors();
         if (client.options == null) return;
-        if (lastNetherCalcState == null || lastNetherCalcState != cfg.netherCalc) {
-            lastNetherCalcState = cfg.netherCalc;
+        if (lastNetherCalcState == null || lastNetherCalcState != cfg.commands.netherCalc) {
+            lastNetherCalcState = cfg.commands.netherCalc;
             MinecraftServer srv = client.getSingleplayerServer();
             if (srv != null && srv.getPlayerList() != null) for (ServerPlayer sp : srv.getPlayerList().getPlayers()) srv.getCommands().sendCommands(sp);
         }
-        if (cfg.disableAdvancementKeybind) while (client.options.keyAdvancements.consumeClick()) {}
-        if (cfg.disableNarrator && client.options.narrator().get() != NarratorStatus.OFF) client.options.narrator().set(NarratorStatus.OFF);
-        if (cfg.borderlessFullscreen && Boolean.TRUE.equals(client.options.exclusiveFullscreen().get())) client.options.exclusiveFullscreen().set(false);
+        if (cfg.remainingHuds.disableAdvancementKeybind) while (client.options.keyAdvancements.consumeClick()) {}
+        if (cfg.remainingHuds.disableNarrator && client.options.narrator().get() != NarratorStatus.OFF) client.options.narrator().set(NarratorStatus.OFF);
+        if (cfg.screenSettings.borderlessFullscreen && Boolean.TRUE.equals(client.options.exclusiveFullscreen().get())) client.options.exclusiveFullscreen().set(false);
 
         KeyMapping toggleGuiKey = findToggleGuiKey(client.options);
         if (currentScreen == null) {
             boolean down = toggleGuiKey != null ? isKeyMappingPhysicallyDown(toggleGuiKey) : InputConstants.isKeyDown(InputConstants.KEY_F1);
-            if (cfg.hud.betterF1) {
+            if (cfg.playerHud.betterF1) {
                 if (down && !wasF1Down) {
                     if (f1State == 0) {
                         f1State = 1;
@@ -162,7 +232,7 @@ public final class AunClientFeatures {
                 if (hurt > prev && hurt > 0) DAMAGE_REVEAL_UNTIL.put(p.getUUID(), System.currentTimeMillis() + 5000L);
                 PREV_HURT_TIME.put(p.getUUID(), hurt);
             }
-            int curLight = cfg.dynamicLights ? getHeldLightLevel(client.player) : 0;
+            int curLight = cfg.remainingHuds.dynamicLights ? getHeldLightLevel(client.player) : 0;
             BlockPos curPos = client.player.blockPosition();
             if (curLight != lastHeldLightLevel || (curLight > 0 && !curPos.equals(lastLightBlockPos))) {
                 if (lastLightBlockPos != null) markLightAreaDirty(client, lastLightBlockPos);
@@ -225,7 +295,7 @@ public final class AunClientFeatures {
     }
 
     public static int computeDynamicLightAt(BlockPos pos) {
-        if (!AunConfigManager.get().dynamicLights || pos == null) return 0;
+        if (!AunConfigManager.get().remainingHuds.dynamicLights || pos == null) return 0;
         Minecraft c = Minecraft.getInstance();
         if (c == null || c.level == null || c.player == null) return 0;
         int best = 0;
@@ -241,10 +311,10 @@ public final class AunClientFeatures {
 
     public static boolean isArmorVisualHidden() { return armorVisualHidden; }
     public static void toggleArmorVisualHidden() { armorVisualHidden = !armorVisualHidden; }
-    public static boolean shouldHidePlayerArmorNow(Player p) { return AunConfigManager.get().hud.hideArmor && armorVisualHidden && p != null && System.currentTimeMillis() >= DAMAGE_REVEAL_UNTIL.getOrDefault(p.getUUID(), 0L) && p.hurtTime == 0; }
-    public static boolean isZooming() { Minecraft c = Minecraft.getInstance(); return AunConfigManager.get().zoom && c != null && currentScreen == null && (isKeyMappingPhysicallyDown(zoomKey) || isConfigKeyDown(c, AunConfigManager.get().zoomKey)); }
-    public static boolean shouldHideHudOnly() { return AunConfigManager.get().hud.betterF1 && f1State == 1; }
+    public static boolean shouldHidePlayerArmorNow(Player p) { return AunConfigManager.get().playerHud.hideArmor && armorVisualHidden && p != null && System.currentTimeMillis() >= DAMAGE_REVEAL_UNTIL.getOrDefault(p.getUUID(), 0L) && p.hurtTime == 0; }
+    public static boolean isZooming() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return cfg.remainingHuds.zoom && c != null && currentScreen == null && (isKeyMappingPhysicallyDown(zoomKey) || isConfigKeyDown(c, cfg.remainingHuds.zoomKey)); }
+    public static boolean shouldHideHudOnly() { return AunConfigManager.get().playerHud.betterF1 && f1State == 1; }
     public static int getPlaceFacingMode() { return placeFacingMode; }
-    public static boolean shouldCancelOwnEffectParticle() { Minecraft c = Minecraft.getInstance(); return inLocalPlayerTickEffects && c != null && c.options != null && (c.options.getCameraType().isFirstPerson() ? AunConfigManager.get().hud.hideOwnParticlesFirstPerson : AunConfigManager.get().hud.hideOwnParticlesThirdPerson); }
+    public static boolean shouldCancelOwnEffectParticle() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return c != null && c.options != null && (c.options.getCameraType().isFirstPerson() ? cfg.playerHud.hideOwnParticlesFirstPerson : cfg.playerHud.hideOwnParticlesThirdPerson); }
 }
 // END OF FILE
