@@ -47,18 +47,20 @@ public class AunConfig implements ConfigData {
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ProfileMode profileMode = ProfileMode.DEFAULT;
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-        public LinkAction loadableProfile = LinkAction.LINK;
+        public LinkAction linkProfile = LinkAction.LINK;
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
         public ExportAction exportOwnProfile = ExportAction.EXPORT;
-        @ConfigEntry.Gui.Excluded public String customProfilePath = "default_profile.json";
+        @ConfigEntry.Gui.Excluded
+        public String customProfilePath = "default_profile.json";
     }
 
     @ConfigEntry.Category("general")
     @ConfigEntry.Gui.Tooltip
     @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-    public LanguageAction languageMenu = LanguageAction.LANGUAGE;
+    public LanguageAction languageWindow = LanguageAction.LANGUAGE;
 
-    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded
+    @ConfigEntry.Category("general")
+    @ConfigEntry.Gui.Excluded
     public String selectedLanguage = "en_us";
 
     // ============================== QOL TAB ==============================
@@ -249,10 +251,10 @@ public class AunConfig implements ConfigData {
     public void syncMirrors() {
         if (general != null) { modEnabled = general.modEnabled; }
         if (profile != null) {
-            profile.loadableProfile = LinkAction.LINK;
+            profile.linkProfile = LinkAction.LINK;
             profile.exportOwnProfile = ExportAction.EXPORT;
         }
-        languageMenu = LanguageAction.LANGUAGE;
+        languageWindow = LanguageAction.LANGUAGE;
         if (clearVision != null) { clearWater = clearVision.clearWater; clearLava = clearVision.clearLava; clearPowderSnow = clearVision.clearPowderSnow; }
         if (worldSettings != null) { favouriteWorlds = worldSettings.favouriteWorlds; worldPlaytimeDisplay = worldSettings.worldPlaytimeDisplay; deletedWorldProtection = worldSettings.deletedWorldProtection; }
         if (entities != null) { reachBehind = entities.reachBehind; reachBehindSign = entities.reachBehindSign; armorStandSwap = entities.armorStandSwap; horseInfo = false; dismountOnClick = entities.dismountOnClick; }
