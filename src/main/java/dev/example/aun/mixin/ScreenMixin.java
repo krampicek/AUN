@@ -5,6 +5,7 @@ import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,9 +26,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
@@ -50,44 +49,26 @@ public abstract class ScreenMixin {
         if (AunConfigScreen.isClothConfigScreen(self)) {
             AunConfigManager.ensureProfileFoldersExist();
 
-            // Bottom-left button: Open Aun_profiles folder in OS file explorer
-            this.addRenderableWidget(Button.builder(Component.literal("§b📂 Aun_profiles"), btn -> {
+            // Bottom-left button: "Browse" (all white text)
+            Button browseBtn = Button.builder(Component.literal("Browse"), btn -> {
                 AunConfigScreen.openFolderInOS(AunConfigScreen.getProfilesBaseDir());
             })
-            .bounds(this.width / 2 - 210, this.height - 26, 90, 20)
+            .bounds(this.width / 2 - 204, this.height - 26, 80, 20)
             .tooltip(Tooltip.create(Component.literal("Open the Aun_profiles folder in your file explorer")))
-            .build());
+            .build();
+            this.addRenderableWidget(browseBtn);
 
-            // Bottom-right button: Standalone Save (with a 6px gap from Save & Quit)
-            this.addRenderableWidget(Button.builder(Component.literal("§6Save"), btn -> {
+            // Bottom-right button: "Save" (all white text, separated from Save & Quit)
+            Button saveBtn = Button.builder(Component.literal("Save"), btn -> {
                 AunConfigScreen.saveWithoutClosing(self);
-                btn.setMessage(Component.literal("§aSaved!"));
             })
-            .bounds(this.width / 2 + 124, this.height - 26, 58, 20)
+            .bounds(this.width / 2 + 100, this.height - 26, 80, 20)
             .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
-            .build());
+            .build();
+            this.addRenderableWidget(saveBtn);
 
-            // Arrow button & rollout dropdown items for the Profile black box
-            Button arrowBtn = Button.builder(Component.literal("§b▼"), btn -> {
-                AunConfigScreen.toggleDropdownList();
-            }).bounds(0, 0, 18, 18).build();
-            arrowBtn.visible = false;
-            arrowBtn.active = false;
-            this.addRenderableWidget(arrowBtn);
-
-            List<Button> itemBtns = new ArrayList<>();
-            for (int i = 0; i < 6; i++) {
-                final int idx = i;
-                Button itemBtn = Button.builder(Component.literal(""), btn -> {
-                    AunConfigScreen.selectProfileFromDropdown(self, idx);
-                }).bounds(0, 0, 100, 18).build();
-                itemBtn.visible = false;
-                itemBtn.active = false;
-                this.addRenderableWidget(itemBtn);
-                itemBtns.add(itemBtn);
-            }
-            AunConfigScreen.registerOverlayWidgets(self, arrowBtn, itemBtns);
-            AunConfigScreen.tickClothConfigScreen(self);
+            AunConfigScreen.registerBottomButtons(browseBtn, saveBtn);
+            AunConfigScreen.layoutBottomBarButtons(self);
             return;
         }
 
@@ -137,6 +118,42 @@ public abstract class ScreenMixin {
                     "Select a world and click: 1x = Gold (Top) | 2x = Diamond (Best) | 3x = Classic")))
             .build();
             this.addRenderableWidget(favButton);
+        }
+    }
+
+    @Inject(
+        method = {
+            "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V",
+            "render(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V"
+        },
+        at = @At("TAIL"),
+        require = 0
+    )
+    private void aun$onAfterScreenRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a, CallbackInfo ci) {
+        AunConfigScreen.onAfterScreenRender((Screen) (Object) this, graphics, mouseX, mouseY);
+    }
+
+    @Inject(
+        method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
+    private void aun$onClothScreenMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        if (AunConfigScreen.onClothScreenMouseClicked((Screen) (Object) this, event.x(), event.y(), event.button())) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(
+        method = "mouseScrolled(DDDD)Z",
+        at = @At("HEAD"),
+        cancellable = true,
+        require = 0
+    )
+    private void aun$onClothScreenMouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY, CallbackInfoReturnable<Boolean> cir) {
+        if (AunConfigScreen.onClothScreenMouseScrolled((Screen) (Object) this, mouseX, mouseY, scrollY)) {
+            cir.setReturnValue(true);
         }
     }
 
