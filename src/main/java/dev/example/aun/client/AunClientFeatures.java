@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.example.aun.Aun;
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
+import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,7 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,8 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AunClientFeatures {
 
     private static KeyMapping zoomKey, faceIntoKey, faceAwayKey, cachedToggleGuiKey;
-    private static boolean searchedToggleGuiKey = false, wasF1Down = false, armorVisualHidden = false, searchedSectionDirtyMethod = false;
+    private static boolean searchedToggleGuiKey = false, wasF1Down = false, wasModToggleDown = false, wasZoomDown = false, armorVisualHidden = false, searchedSectionDirtyMethod = false;
     private static volatile int placeFacingMode = 0;
+    private static int prevPlaceFacingMode = 0;
     private static int f1State = 0, useKeyHeldTicks = 0, lastHeldLightLevel = 0;
     private static Boolean lastNetherCalcState = null;
     private static BlockPos lastAccuratePlaceTarget = null, lastLightBlockPos = null;
@@ -81,6 +84,13 @@ public final class AunClientFeatures {
         for (String[] c : cands) {
             try { Class.forName(c[0]).getMethod(c[1], KeyMapping.class).invoke(null, key); return; }
             catch (ReflectiveOperationException ignored) {}
+        }
+    }
+
+    public static void sendFeatureStatusOverlay(Minecraft client, String featureName, boolean enabled) {
+        if (client != null && client.player != null) {
+            String stateText = enabled ? "§aON" : "§cOFF";
+            client.player.sendOverlayMessage(Component.literal("§f" + featureName + ": " + stateText));
         }
     }
 
@@ -162,6 +172,10 @@ public final class AunClientFeatures {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.options != null) enforceBetterF1HideGui(mc.options);
         boolean zoomingNow = isZooming();
+        if (zoomingNow != wasZoomDown) {
+            wasZoomDown = zoomingNow;
+            sendFeatureStatusOverlay(mc, "Zoom", zoomingNow);
+        }
         if (mc != null && mc.player != null) {
             Field selField = getInventorySelectedField();
             if (selField != null) {
@@ -192,7 +206,7 @@ public final class AunClientFeatures {
         float dt = lastZoomFrameTimeNs == 0L ? 0.016F : Math.min(0.1F, (now - lastZoomFrameTimeNs) / 1_000_000_000.0F);
         lastZoomFrameTimeNs = now;
         float goal = zoomingNow ? targetZoomMultiplier : 1.0F;
-        currentZoomMultiplier = Mth.lerp(Math.min(1.0F, 14.0F * dt), currentZoomMultiplier, goal);
+        currentZoomMultiplier = Mth.lerp(Math.min(1.0F, 18.0F * dt), currentZoomMultiplier, goal);
         if (Math.abs(currentZoomMultiplier - goal) < 0.002F) currentZoomMultiplier = goal;
     }
 
@@ -204,7 +218,26 @@ public final class AunClientFeatures {
     private static void onStartTick(Minecraft client) {
         AunConfig cfg = AunConfigManager.get();
         cfg.syncMirrors();
+        if (currentScreen != null) {
+            AunConfigScreen.tickClothConfigScreen(currentScreen);
+        }
         if (client.options == null) return;
+
+        if (currentScreen == null && cfg.general != null) {
+            boolean modKeyDown = isConfigKeyDown(client, cfg.general.toggleKey);
+            if (modKeyDown && !wasModToggleDown) {
+                cfg.general.modEnabled = !cfg.general.modEnabled;
+                cfg.syncMirrors();
+                try { AutoConfig.getConfigHolder(AunConfig.class).save(); } catch (Throwable ignored) {}
+                sendFeatureStatusOverlay(client, "Toggle AUN Features", cfg.general.modEnabled);
+            }
+            wasModToggleDown = modKeyDown;
+        } else {
+            wasModToggleDown = false;
+        }
+
+        if (cfg.general != null && !cfg.general.modEnabled) return;
+
         if (lastNetherCalcState == null || lastNetherCalcState != cfg.commands.netherCalc) {
             lastNetherCalcState = cfg.commands.netherCalc;
             MinecraftServer srv = client.getSingleplayerServer();
@@ -220,6 +253,7 @@ public final class AunClientFeatures {
             if (cfg.playerHud.betterF1) {
                 if (down && !wasF1Down) {
                     f1State = (f1State + 1) % 3;
+                    sendFeatureStatusOverlay(client, "Better F1", f1State != 0);
                 }
                 enforceBetterF1HideGui(client.options);
             } else {
@@ -232,6 +266,7 @@ public final class AunClientFeatures {
     private static void onEndTick(Minecraft client) {
         if (client.options == null) return;
         AunConfig cfg = AunConfigManager.get();
+        if (cfg.general != null && !cfg.general.modEnabled) return;
         enforceBetterF1HideGui(client.options);
 
         if (client.options.keyUse.isDown()) useKeyHeldTicks++;
@@ -242,6 +277,13 @@ public final class AunClientFeatures {
             boolean away = isKeyMappingPhysicallyDown(faceAwayKey) || isConfigKeyDown(client, cfg.facingAwayKey);
             placeFacingMode = into ? 1 : (away ? 2 : 0);
         } else placeFacingMode = 0;
+
+        if (placeFacingMode != prevPlaceFacingMode) {
+            if (placeFacingMode == 1) sendFeatureStatusOverlay(client, "Directional Placement (Into)", true);
+            else if (placeFacingMode == 2) sendFeatureStatusOverlay(client, "Directional Placement (Away)", true);
+            else sendFeatureStatusOverlay(client, "Directional Placement", false);
+            prevPlaceFacingMode = placeFacingMode;
+        }
 
         if (client.player != null && client.level != null) {
             for (Player p : client.level.players()) {
@@ -262,7 +304,8 @@ public final class AunClientFeatures {
     }
 
     public static boolean shouldAllowAccurateFastPlace(Minecraft client) {
-        if (!AunConfigManager.get().accurateBlockPlacement || client.player == null || client.level == null) return false;
+        AunConfig cfg = AunConfigManager.get();
+        if ((cfg.general != null && !cfg.general.modEnabled) || !cfg.accurateBlockPlacement || client.player == null || client.level == null) return false;
         BlockItem held = (client.player.getMainHandItem().getItem() instanceof BlockItem b1) ? b1
                 : ((client.player.getOffhandItem().getItem() instanceof BlockItem b2) ? b2 : null);
         if (held == null || held.getBlock() instanceof EntityBlock) return false;
@@ -316,7 +359,8 @@ public final class AunClientFeatures {
     }
 
     public static int computeDynamicLightAt(BlockPos pos) {
-        if (!AunConfigManager.get().remainingHuds.dynamicLights || pos == null) return 0;
+        AunConfig cfg = AunConfigManager.get();
+        if ((cfg.general != null && !cfg.general.modEnabled) || !cfg.remainingHuds.dynamicLights || pos == null) return 0;
         Minecraft c = Minecraft.getInstance();
         if (c == null || c.level == null || c.player == null) return 0;
         int best = 0;
@@ -332,10 +376,10 @@ public final class AunClientFeatures {
 
     public static boolean isArmorVisualHidden() { return armorVisualHidden; }
     public static void toggleArmorVisualHidden() { armorVisualHidden = !armorVisualHidden; }
-    public static boolean shouldHidePlayerArmorNow(Player p) { return AunConfigManager.get().playerHud.hideArmor && armorVisualHidden && p != null && System.currentTimeMillis() >= DAMAGE_REVEAL_UNTIL.getOrDefault(p.getUUID(), 0L) && p.hurtTime == 0; }
-    public static boolean isZooming() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return cfg.remainingHuds.zoom && c != null && currentScreen == null && (isKeyMappingPhysicallyDown(zoomKey) || isConfigKeyDown(c, cfg.remainingHuds.zoomKey)); }
-    public static boolean shouldHideHudOnly() { return AunConfigManager.get().playerHud.betterF1 && f1State == 1; }
+    public static boolean shouldHidePlayerArmorNow(Player p) { AunConfig cfg = AunConfigManager.get(); return (cfg.general == null || cfg.general.modEnabled) && cfg.playerHud.hideArmor && armorVisualHidden && p != null && System.currentTimeMillis() >= DAMAGE_REVEAL_UNTIL.getOrDefault(p.getUUID(), 0L) && p.hurtTime == 0; }
+    public static boolean isZooming() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return (cfg.general == null || cfg.general.modEnabled) && cfg.remainingHuds.zoom && c != null && currentScreen == null && (isKeyMappingPhysicallyDown(zoomKey) || isConfigKeyDown(c, cfg.remainingHuds.zoomKey)); }
+    public static boolean shouldHideHudOnly() { AunConfig cfg = AunConfigManager.get(); return (cfg.general == null || cfg.general.modEnabled) && cfg.playerHud.betterF1 && f1State == 1; }
     public static int getPlaceFacingMode() { return placeFacingMode; }
-    public static boolean shouldCancelOwnEffectParticle() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return c != null && c.options != null && (c.options.getCameraType().isFirstPerson() ? cfg.playerHud.hideOwnParticlesFirstPerson : cfg.playerHud.hideOwnParticlesThirdPerson); }
+    public static boolean shouldCancelOwnEffectParticle() { Minecraft c = Minecraft.getInstance(); AunConfig cfg = AunConfigManager.get(); return (cfg.general == null || cfg.general.modEnabled) && c != null && c.options != null && (c.options.getCameraType().isFirstPerson() ? cfg.playerHud.hideOwnParticlesFirstPerson : cfg.playerHud.hideOwnParticlesThirdPerson); }
 }
 // END OF FILE
