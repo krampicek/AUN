@@ -211,6 +211,11 @@ public class AunConfigScreen extends Screen {
             hideOrDisableCheatyEntries(screen);
         }
 
+        // Handle conditional visibility of the "Choose Language" button when Sync with Minecraft is OFF
+        if (realCfg.languageSub != null) {
+            toggleLanguageButtonVisibility(screen, !realCfg.languageSub.syncWithMinecraft);
+        }
+
         layoutBottomBarButtons(screen);
 
         AbstractSelectionList<?> listWidget = findListWidget(screen);
@@ -225,7 +230,7 @@ public class AunConfigScreen extends Screen {
         AbstractSelectionList<?> listWidget = findListWidget(screen);
         if (listWidget == null) return;
         for (Object entry : listWidget.children()) {
-            if (entry == null) return;
+            if (entry == null) continue;
             try {
                 String str = entry.toString().toLowerCase(Locale.ROOT);
                 if (str.contains("autototem") || str.contains("closecall") || str.contains("auto save")) {
@@ -240,6 +245,35 @@ public class AunConfigScreen extends Screen {
                                 if (item instanceof Button b2) {
                                     b2.active = false;
                                     b2.setMessage(Component.literal("§8DISABLED"));
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void toggleLanguageButtonVisibility(Screen screen, boolean show) {
+        AbstractSelectionList<?> listWidget = findListWidget(screen);
+        if (listWidget == null) return;
+        for (Object entry : listWidget.children()) {
+            if (entry == null) continue;
+            try {
+                String str = entry.toString().toLowerCase(Locale.ROOT);
+                if (str.contains("chooselanguage") || str.contains("languageaction")) {
+                    for (Field f : entry.getClass().getDeclaredFields()) {
+                        f.setAccessible(true);
+                        Object val = f.get(entry);
+                        if (val instanceof Button btn) {
+                            btn.visible = show;
+                            btn.active = show;
+                        } else if (val instanceof Collection col) {
+                            for (Object item : col) {
+                                if (item instanceof Button b2) {
+                                    b2.visible = show;
+                                    b2.active = show;
                                 }
                             }
                         }
