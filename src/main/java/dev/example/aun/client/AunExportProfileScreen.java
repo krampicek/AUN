@@ -1,5 +1,6 @@
 package dev.example.aun.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -8,6 +9,8 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+
+import java.lang.reflect.Method;
 
 public class AunExportProfileScreen extends Screen {
 
@@ -29,7 +32,7 @@ public class AunExportProfileScreen extends Screen {
         int centerY = this.height / 2;
         boolean cz = AunConfigScreen.isCzechSelected();
 
-        this.nameBox = new EditBox(this.font, centerX - boxWidth / 2, centerY - 14, boxWidth, 20, Component.literal("Profile Name"));
+        this.nameBox = new EditBox(this.font, centerX - boxWidth / 2, centerY - 6, boxWidth, 20, Component.literal("Profile Name"));
         this.nameBox.setMaxLength(64);
         this.nameBox.setHint(Component.literal(cz ? "Zadejte název profilu..." : "Enter profile name..."));
         this.nameBox.setValue("my_profile");
@@ -37,17 +40,16 @@ public class AunExportProfileScreen extends Screen {
         this.addRenderableWidget(this.nameBox);
         this.setFocused(this.nameBox);
 
-        // Cancel button on the left below the black box (white text)
+        int bottomY = centerY + 36;
         this.addRenderableWidget(Button.builder(Component.literal(cz ? "Zrušit" : "Cancel"), btn -> {
-            AunConfigScreen.reopenClothScreen(this.parent);
-        }).bounds(centerX - boxWidth / 2, centerY + 14, 106, 20).build());
+            Minecraft.getInstance().setScreenAndShow(this.parent);
+        }).bounds(centerX - boxWidth / 2, bottomY, 106, 20).build());
 
-        // Export button on the right below the black box (white initially, green "Exported" after click)
         this.exportButton = Button.builder(Component.literal(cz ? "Exportovat" : "Export"), btn -> {
             String typedName = this.nameBox.getValue();
             AunConfigScreen.exportProfileWithCustomName(this.parent, typedName);
             btn.setMessage(Component.literal(cz ? "§aExportováno" : "§aExported"));
-        }).bounds(centerX + boxWidth / 2 - 106, centerY + 14, 106, 20).build();
+        }).bounds(centerX + boxWidth / 2 - 106, bottomY, 106, 20).build();
         this.addRenderableWidget(this.exportButton);
     }
 
@@ -102,17 +104,40 @@ public class AunExportProfileScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+        if (this.parent != null) {
+            try {
+                Method m = this.parent.getClass().getMethod("extractRenderState", GuiGraphicsExtractor.class, int.class, int.class, float.class);
+                m.invoke(this.parent, graphics, -1, -1, a);
+            } catch (Throwable ignored) {
+                try {
+                    Method m2 = this.parent.getClass().getMethod("render", GuiGraphicsExtractor.class, int.class, int.class, float.class);
+                    m2.invoke(this.parent, graphics, -1, -1, a);
+                } catch (Throwable ignored2) {}
+            }
+        }
+
+        int centerX = this.width / 2;
+        int centerY = this.height / 2;
+        int boxW = 280;
+        int boxH = 140;
+        int boxX = centerX - boxW / 2;
+        int boxY = centerY - boxH / 2;
+
+        AunConfigScreen.drawRect(graphics, boxX - 1, boxY - 1, boxX + boxW + 1, boxY + boxH + 1, 0xFFFFFFFF);
+        AunConfigScreen.drawRect(graphics, boxX, boxY, boxX + boxW, boxY + boxH, 0xFF181818);
+
         super.extractRenderState(graphics, mouseX, mouseY, a);
+
         boolean cz = AunConfigScreen.isCzechSelected();
         String titleText = cz ? "Pojmenujte svůj profil" : "Name Your Profile";
-        int titleX = this.width / 2 - this.font.width(titleText) / 2;
-        int titleY = this.height / 2 - 34;
+        int titleX = centerX - this.font.width(titleText) / 2;
+        int titleY = boxY + 16;
         AunConfigScreen.drawCenteredTitle(graphics, this.font, titleText, titleX, titleY);
     }
 
     @Override
     public void onClose() {
-        AunConfigScreen.reopenClothScreen(this.parent);
+        Minecraft.getInstance().setScreenAndShow(this.parent);
     }
 }
 // END OF FILE
