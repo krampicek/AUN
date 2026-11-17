@@ -1,7 +1,6 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
-import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.Minecraft;
@@ -43,38 +42,6 @@ public abstract class ScreenMixin {
         Screen self = (Screen) (Object) this;
         AunClientFeatures.currentScreen = self;
         AunWorldFavorites.resetChestSearch();
-
-        if (AunConfigScreen.isClothConfigScreen(self)) {
-            AunConfigManager.ensureProfileFoldersExist();
-
-            Button browseBtn = Button.builder(Component.literal("Browse"), btn -> {
-                AunConfigScreen.openFolderInOS(AunConfigScreen.getProfilesBaseDir());
-            })
-            .bounds(this.width / 2 - 204, this.height - 26, 80, 20)
-            .tooltip(Tooltip.create(Component.literal("Open the Aun_profiles folder in your file explorer")))
-            .build();
-            this.addRenderableWidget(browseBtn);
-
-            Button saveQuitBtn = Button.builder(Component.literal("Save & Quit"), btn -> {
-                AunConfigScreen.saveAndClose(self);
-            })
-            .bounds(this.width / 2 - 12, this.height - 26, 106, 20)
-            .tooltip(Tooltip.create(Component.literal("Save changes and close the menu")))
-            .build();
-            this.addRenderableWidget(saveQuitBtn);
-
-            Button saveBtn = Button.builder(Component.literal("Save"), btn -> {
-                AunConfigScreen.saveWithoutClosing(self);
-            })
-            .bounds(this.width / 2 + 100, this.height - 26, 80, 20)
-            .tooltip(Tooltip.create(Component.literal("Save changes without closing the menu")))
-            .build();
-            this.addRenderableWidget(saveBtn);
-
-            AunConfigScreen.registerBottomButtons(browseBtn, saveQuitBtn, saveBtn);
-            AunConfigScreen.layoutBottomBarButtons(self);
-            return;
-        }
 
         if (self instanceof InventoryScreen invScreen) {
             if (AunConfigManager.get().playerHud.hideArmor) {
