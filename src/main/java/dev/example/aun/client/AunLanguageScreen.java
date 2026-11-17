@@ -50,7 +50,7 @@ public class AunLanguageScreen extends Screen {
         }
 
         int bottomY = this.height / 2 + 54;
-        boolean cz = "cs_cz".equalsIgnoreCase(this.selectedLangCode);
+        boolean cz = AunConfigScreen.isCzechSelected();
 
         this.addRenderableWidget(Button.builder(Component.literal(cz ? "Zrušit" : "Cancel"), btn -> {
             Minecraft.getInstance().setScreenAndShow(this.parent);
@@ -93,7 +93,7 @@ public class AunLanguageScreen extends Screen {
 
         super.extractRenderState(graphics, mouseX, mouseY, a);
 
-        boolean cz = "cs_cz".equalsIgnoreCase(this.selectedLangCode);
+        boolean cz = AunConfigScreen.isCzechSelected();
         String titleText = cz ? "Vyberte jazyk" : "Select Language";
         int titleX = centerX - this.font.width(titleText) / 2;
         int titleY = boxY + 16;
