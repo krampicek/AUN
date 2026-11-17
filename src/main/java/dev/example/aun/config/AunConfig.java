@@ -4,6 +4,8 @@ import dev.example.aun.Aun;
 import me.shedaniel.autoconfig.ConfigData;
 import me.shedaniel.autoconfig.annotation.Config;
 import me.shedaniel.autoconfig.annotation.ConfigEntry;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 
 import java.util.Locale;
@@ -267,7 +269,7 @@ public class AunConfig implements ConfigData {
         }
         if (languageSub != null) {
             languageSub.chooseLanguage = LanguageAction.CHOOSE_LANGUAGE;
-            if (languageSub.syncWithMinecraft) {
+            if (languageSub.syncWithMinecraft && FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
                 try {
                     String mcLang = Minecraft.getInstance().getLanguageManager().getSelected();
                     if (mcLang != null && !mcLang.isBlank()) {
