@@ -1,9 +1,11 @@
 package dev.example.aun.mixin;
 
 import dev.example.aun.client.AunClientFeatures;
+import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
@@ -90,6 +92,18 @@ public abstract class ScreenMixin {
             .build();
             this.addRenderableWidget(favButton);
         }
+    }
+
+    @Inject(
+        method = {
+            "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V",
+            "render(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V"
+        },
+        at = @At("HEAD"),
+        require = 0
+    )
+    private void aun$onBeforeScreenRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a, CallbackInfo ci) {
+        AunConfigScreen.tickClothConfigScreen((Screen) (Object) this);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"), require = 0)
