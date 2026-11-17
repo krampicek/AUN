@@ -1,8 +1,13 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.client.AunConfigScreen;
+import dev.example.aun.client.AunExportProfileScreen;
+import dev.example.aun.client.AunLanguageScreen;
+import dev.example.aun.client.AunLoadProfileScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -43,12 +48,22 @@ public abstract class KeyboardHandlerMixin {
             }
         }
 
-        Screen cur = net.minecraft.client.Minecraft.getInstance().screen;
+        Screen cur = Minecraft.getInstance().screen;
         if (AunConfigScreen.isClothConfigScreen(cur) && event.button() == 0) {
             if (self instanceof Button btn) {
                 String txt = btn.getMessage().getString().trim().toUpperCase(java.util.Locale.ROOT);
-                if (txt.contains("LINK") || txt.contains("EXPORT") || txt.contains("CHOOSE_LANGUAGE") || txt.contains("ZVOLIT JAZYK")) {
-                    btn.onPress();
+                if (txt.contains("LINK")) {
+                    Minecraft.getInstance().setScreenAndShow(new AunLoadProfileScreen(cur));
+                    cir.setReturnValue(true);
+                    return;
+                }
+                if (txt.contains("EXPORT")) {
+                    Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(cur));
+                    cir.setReturnValue(true);
+                    return;
+                }
+                if (txt.contains("CHOOSE_LANGUAGE") || txt.contains("ZVOLIT JAZYK")) {
+                    Minecraft.getInstance().setScreenAndShow(new AunLanguageScreen(cur));
                     cir.setReturnValue(true);
                     return;
                 }
