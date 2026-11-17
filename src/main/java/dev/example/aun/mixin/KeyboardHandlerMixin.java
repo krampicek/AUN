@@ -1,7 +1,11 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.client.AunConfigScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
+import net.minecraft.client.gui.components.AbstractSelectionList;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -12,7 +16,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin({AbstractContainerScreen.class, ChatScreen.class})
+@Mixin({
+    AbstractContainerScreen.class,
+    ChatScreen.class,
+    AbstractSelectionList.class,
+    AbstractWidget.class
+})
 public abstract class KeyboardHandlerMixin {
 
     @Inject(
@@ -21,12 +30,29 @@ public abstract class KeyboardHandlerMixin {
         cancellable = true,
         require = 0
     )
-    private void aun$onSubScreenMouseClicked(
+    private void aun$onSubScreenOrWidgetMouseClicked(
             MouseButtonEvent event,
             boolean doubleClick,
             CallbackInfoReturnable<Boolean> cir) {
-        if (AunWorldFavorites.onScreenMouseClicked((Screen) (Object) this, event)) {
-            cir.setReturnValue(true);
+        Object self = this;
+
+        if (self instanceof Screen screen) {
+            if (AunWorldFavorites.onScreenMouseClicked(screen, event)) {
+                cir.setReturnValue(true);
+                return;
+            }
+        }
+
+        Screen cur = net.minecraft.client.Minecraft.getInstance().screen;
+        if (AunConfigScreen.isClothConfigScreen(cur) && event.button() == 0) {
+            if (self instanceof Button btn) {
+                String txt = btn.getMessage().getString().trim().toUpperCase(java.util.Locale.ROOT);
+                if (txt.contains("LINK") || txt.contains("EXPORT") || txt.contains("CHOOSE_LANGUAGE") || txt.contains("ZVOLIT JAZYK")) {
+                    btn.onPress();
+                    cir.setReturnValue(true);
+                    return;
+                }
+            }
         }
     }
 
@@ -39,11 +65,12 @@ public abstract class KeyboardHandlerMixin {
     private void aun$onSubScreenKeyPressed(
             KeyEvent event,
             CallbackInfoReturnable<Boolean> cir) {
+        if (!((Object) this instanceof Screen screen)) return;
         if (AunConfigManager.get().remainingHuds.disableNarrator && event.key() == 66 && event.hasControlDown()) {
             cir.setReturnValue(true);
             return;
         }
-        if (AunWorldFavorites.onScreenKeyPressed((Screen) (Object) this, event)) {
+        if (AunWorldFavorites.onScreenKeyPressed(screen, event)) {
             cir.setReturnValue(true);
         }
     }
