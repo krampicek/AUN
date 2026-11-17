@@ -206,12 +206,10 @@ public class AunConfigScreen extends Screen {
             applyModLanguage(realCfg.selectedLanguage);
         }
 
-        // Handle "Kinda Cheaty" graying out Auto Totem and It Was Close (Auto Save Your Stuff)
         if (realCfg.general != null && realCfg.general.kindaCheaty) {
             hideOrDisableCheatyEntries(screen);
         }
 
-        // Handle conditional visibility of the "Choose Language" button when Sync with Minecraft is OFF
         if (realCfg.languageSub != null) {
             toggleLanguageButtonVisibility(screen, !realCfg.languageSub.syncWithMinecraft);
         }
