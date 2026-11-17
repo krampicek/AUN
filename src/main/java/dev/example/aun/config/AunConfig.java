@@ -4,21 +4,44 @@ import dev.example.aun.Aun;
 import me.shedaniel.autoconfig.ConfigData;
 import me.shedaniel.autoconfig.annotation.Config;
 import me.shedaniel.autoconfig.annotation.ConfigEntry;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.Minecraft;
-
-import java.util.Locale;
 
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
 
-    public enum ProfileMode { DEFAULT, ALL_ON, ALL_OFF, OWN_PROFILE }
-    public enum LinkAction { LINK, OPEN_LINK; @Override public String toString() { return "LINK"; } }
-    public enum ExportAction { EXPORT, OPEN_EXPORT; @Override public String toString() { return "EXPORT"; } }
-    public enum LanguageAction { CHOOSE_LANGUAGE, OPEN_LANGUAGE; @Override public String toString() { return "CHOOSE_LANGUAGE"; } }
-    public enum SaveAction { SAVE, CLICKED; @Override public String toString() { return "Save (Keep Open)"; } }
-    public enum BrowseAction { BROWSE, CLICKED; @Override public String toString() { return "Browse Profiles"; } }
+    public enum ProfileMode {
+        DEFAULT,
+        ALL_ON,
+        ALL_OFF,
+        OWN_PROFILE
+    }
+
+    public enum LinkAction {
+        LINK,
+        OPEN_LINK;
+        @Override public String toString() { return "LINK"; }
+    }
+
+    public enum ExportAction {
+        EXPORT,
+        OPEN_EXPORT;
+        @Override public String toString() { return "EXPORT"; }
+    }
+
+    public enum LanguageAction {
+        CHOOSE_LANGUAGE,
+        OPEN_LANGUAGE;
+        @Override public String toString() { return "CHOOSE_LANGUAGE"; }
+    }
+
+    public enum SaveAction {
+        SAVE, CLICKED;
+        @Override public String toString() { return "Save (Keep Open)"; }
+    }
+
+    public enum BrowseAction {
+        BROWSE, CLICKED;
+        @Override public String toString() { return "Browse Profiles"; }
+    }
 
     // ============================== GENERAL TAB ==============================
     @ConfigEntry.Category("general") @ConfigEntry.Gui.TransitiveObject
@@ -255,14 +278,6 @@ public class AunConfig implements ConfigData {
         }
         if (languageSub != null) {
             languageSub.chooseLanguage = LanguageAction.CHOOSE_LANGUAGE;
-            if (languageSub.syncWithMinecraft && FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
-                try {
-                    String mcLang = Minecraft.getInstance().getLanguageManager().getSelected();
-                    if (mcLang != null && !mcLang.isBlank()) {
-                        selectedLanguage = mcLang.toLowerCase(Locale.ROOT).replace('-', '_');
-                    }
-                } catch (Throwable ignored) {}
-            }
         }
         if (kindaCheaty) {
             autoTotem = false;
