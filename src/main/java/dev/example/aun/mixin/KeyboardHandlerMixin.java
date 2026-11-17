@@ -1,6 +1,10 @@
 package dev.example.aun.mixin;
 
+import dev.example.aun.client.AunClientFeatures;
 import dev.example.aun.client.AunConfigScreen;
+import dev.example.aun.client.AunExportProfileScreen;
+import dev.example.aun.client.AunLanguageScreen;
+import dev.example.aun.client.AunLoadProfileScreen;
 import dev.example.aun.client.AunWorldFavorites;
 import dev.example.aun.config.AunConfigManager;
 import net.minecraft.client.gui.components.AbstractSelectionList;
@@ -15,12 +19,26 @@ import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Locale;
 
 @Mixin({AbstractContainerScreen.class, ChatScreen.class, AbstractSelectionList.class, AbstractWidget.class})
 public abstract class KeyboardHandlerMixin {
+
+    @ModifyVariable(
+        method = "setMessage(Lnet/minecraft/network/chat/Component;)V",
+        at = @At("HEAD"),
+        argsOnly = true,
+        require = 0
+    )
+    private Component aun$forceDisabledLabelOnCheatyButtons(Component message) {
+        if (AunConfigScreen.isLockedCheatyButton(this)) {
+            return Component.literal("Disabled");
+        }
+        return message;
+    }
 
     @Inject(
         method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
@@ -41,22 +59,33 @@ public abstract class KeyboardHandlerMixin {
             }
         }
 
-        Screen cur = net.minecraft.client.Minecraft.getInstance().screen;
+        Screen cur = AunClientFeatures.currentScreen;
         if (AunConfigScreen.isClothConfigScreen(cur) && event.button() == 0) {
             if (self instanceof Button btn) {
                 String txt = btn.getMessage().getString().trim().toUpperCase(Locale.ROOT);
-                
-                // Wire the Save button
+                if (txt.contains("LINK")) {
+                    net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new AunLoadProfileScreen(cur));
+                    cir.setReturnValue(true);
+                    return;
+                }
+                if (txt.contains("EXPORT")) {
+                    net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new AunExportProfileScreen(cur));
+                    cir.setReturnValue(true);
+                    return;
+                }
+                if (txt.contains("CHOOSE_LANGUAGE") || txt.contains("ZVOLIT JAZYK") || txt.contains("LANGUAGE")) {
+                    net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new AunLanguageScreen(cur));
+                    cir.setReturnValue(true);
+                    return;
+                }
                 if (txt.contains("SAVE (KEEP OPEN)")) {
                     AunConfigScreen.saveWithoutClosing(cur);
                     btn.setMessage(Component.literal("§aSaved!"));
                     cir.setReturnValue(true);
                     return;
                 }
-                
-                // Wire the Browse button
-                if (txt.contains("BROWSE PROFILES")) {
-                    AunConfigScreen.openProfilesFolder();
+                if (txt.contains("BROWSE PROFILES") || txt.contains("BROWSE")) {
+                    AunConfigScreen.openFolderInOS(AunConfigScreen.getProfilesBaseDir());
                     cir.setReturnValue(true);
                     return;
                 }
