@@ -4,6 +4,9 @@ import dev.example.aun.Aun;
 import me.shedaniel.autoconfig.ConfigData;
 import me.shedaniel.autoconfig.annotation.Config;
 import me.shedaniel.autoconfig.annotation.ConfigEntry;
+import net.minecraft.client.Minecraft;
+
+import java.util.Locale;
 
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
@@ -60,7 +63,7 @@ public class AunConfig implements ConfigData {
     public static class LanguageSubConfig {
         @ConfigEntry.Gui.Tooltip public boolean syncWithMinecraft = true;
         @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-        public LanguageAction chooseLanguage = LanguageAction.CHZONE_LANGUAGE;
+        public LanguageAction chooseLanguage = LanguageAction.CHOOSE_LANGUAGE;
     }
 
     @ConfigEntry.Category("general")
