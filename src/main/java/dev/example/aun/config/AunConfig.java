@@ -4,126 +4,62 @@ import dev.example.aun.Aun;
 import me.shedaniel.autoconfig.ConfigData;
 import me.shedaniel.autoconfig.annotation.Config;
 import me.shedaniel.autoconfig.annotation.ConfigEntry;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
+
+import java.util.Locale;
 
 @Config(name = Aun.MOD_ID)
 public class AunConfig implements ConfigData {
 
-    public enum ProfileMode {
-        DEFAULT,
-        ALL_ON,
-        ALL_OFF,
-        OWN_PROFILE
-    }
+    public enum ProfileMode { DEFAULT, ALL_ON, ALL_OFF, OWN_PROFILE }
+    public enum LinkAction { LINK, OPEN_LINK; @Override public String toString() { return "LINK"; } }
+    public enum ExportAction { EXPORT, OPEN_EXPORT; @Override public String toString() { return "EXPORT"; } }
+    public enum LanguageAction { CHOOSE_LANGUAGE, OPEN_LANGUAGE; @Override public String toString() { return "CHOOSE_LANGUAGE"; } }
 
     // ============================== GENERAL TAB ==============================
     @ConfigEntry.Category("general") @ConfigEntry.Gui.TransitiveObject
-    public GeneralSettingsConfig general = new GeneralSettingsConfig();
-    public static class GeneralSettingsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean modEnabled = true;
-        @ConfigEntry.Gui.Tooltip public String toggleKey = "N";
-        @ConfigEntry.Gui.Tooltip public boolean kindaCheaty = false;
-        @ConfigEntry.Gui.Tooltip @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-        public ProfileMode profileMode = ProfileMode.DEFAULT;
-        @ConfigEntry.Gui.Tooltip public String customProfilePath = "";
-    }
+    public AunConfigGeneral.GeneralSettingsConfig general = new AunConfigGeneral.GeneralSettingsConfig();
+
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.CollapsibleObject
+    public AunConfigGeneral.ProfileSubConfig profile = new AunConfigGeneral.ProfileSubConfig();
+
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.CollapsibleObject
+    public AunConfigGeneral.LanguageSubConfig languageSub = new AunConfigGeneral.LanguageSubConfig();
+
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded
+    public String selectedLanguage = "en_us";
 
     // ============================== QOL TAB ==============================
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public ClearVisionConfig clearVision = new ClearVisionConfig();
-    public static class ClearVisionConfig {
-        @ConfigEntry.Gui.Tooltip public boolean clearWater = true;
-        @ConfigEntry.Gui.Tooltip public boolean clearLava = true;
-        @ConfigEntry.Gui.Tooltip public boolean clearPowderSnow = true;
-    }
+    public AunConfigQol.ClearVisionConfig clearVision = new AunConfigQol.ClearVisionConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public WorldSettingsConfig worldSettings = new WorldSettingsConfig();
-    public static class WorldSettingsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean favouriteWorlds = true;
-        @ConfigEntry.Gui.Tooltip public boolean worldPlaytimeDisplay = true;
-        @ConfigEntry.Gui.Tooltip public boolean deletedWorldProtection = true;
-    }
+    public AunConfigQol.WorldSettingsConfig worldSettings = new AunConfigQol.WorldSettingsConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public EntitiesConfig entities = new EntitiesConfig();
-    public static class EntitiesConfig {
-        @ConfigEntry.Gui.Tooltip public boolean reachBehind = true;
-        @ConfigEntry.Gui.Tooltip public boolean reachBehindSign = true;
-        @ConfigEntry.Gui.Tooltip public boolean armorStandSwap = true;
-        @ConfigEntry.Gui.Tooltip public boolean horseInfo = true;
-        @ConfigEntry.Gui.Tooltip public boolean dismountOnClick = true;
-    }
+    public AunConfigQol.EntitiesConfig entities = new AunConfigQol.EntitiesConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public AutoSettingsConfig autoSettings = new AutoSettingsConfig();
-    public static class AutoSettingsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean autoPickup = true;
-        @ConfigEntry.Gui.Tooltip public boolean autoClimbLadders = true;
-        @ConfigEntry.Gui.Tooltip public boolean autoTotem = true;
-        @ConfigEntry.Gui.Tooltip public boolean closeCall = true;
-        @ConfigEntry.Gui.Tooltip public boolean autoToolSwitch = true;
-        @ConfigEntry.Gui.Tooltip public boolean simpleHarvest = true;
-    }
+    public AunConfigQol.AutoSettingsConfig autoSettings = new AunConfigQol.AutoSettingsConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public PlayerHudConfig playerHud = new PlayerHudConfig();
-    public static class PlayerHudConfig {
-        @ConfigEntry.Gui.Tooltip public boolean stackRefill = true;
-        @ConfigEntry.Gui.Tooltip public boolean betterF1 = true;
-        @ConfigEntry.Gui.Tooltip public boolean bundleFix = true;
-        @ConfigEntry.Gui.Tooltip public boolean hideArmor = true;
-        @ConfigEntry.Gui.Tooltip public boolean raisedHotbar = true;
-        @ConfigEntry.Gui.Tooltip public boolean headLocator = true;
-        @ConfigEntry.Gui.Tooltip public boolean locatorBarCombination = true;
-        @ConfigEntry.Gui.Tooltip public boolean chatHeads = true;
-        @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesFirstPerson = true;
-        @ConfigEntry.Gui.Tooltip public boolean hideOwnParticlesThirdPerson = true;
-        @ConfigEntry.Gui.Tooltip public boolean centralCrosshair = true;
-    }
+    public AunConfigQol.PlayerHudConfig playerHud = new AunConfigQol.PlayerHudConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public RemainingHudsConfig remainingHuds = new RemainingHudsConfig();
-    public static class RemainingHudsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean disableNarrator = true;
-        @ConfigEntry.Gui.Tooltip public boolean disableAdvancementKeybind = true;
-        @ConfigEntry.Gui.Tooltip public boolean ctrlDropAllSameItems = true;
-        @ConfigEntry.Gui.Tooltip public boolean moreChatHistory = true;
-        @ConfigEntry.Gui.Tooltip public boolean chatTextCopy = true;
-        @ConfigEntry.Gui.Tooltip public boolean recipeBookOrigin = true;
-        @ConfigEntry.Gui.Tooltip public boolean bookScroll = true;
-        @ConfigEntry.Gui.Tooltip public boolean zoom = true;
-        @ConfigEntry.Gui.Tooltip public String zoomKey = "C";
-        @ConfigEntry.Gui.Tooltip public boolean dynamicLights = true;
-        @ConfigEntry.Gui.Tooltip public boolean chestSearchBar = true;
-    }
+    public AunConfigQol.RemainingHudsConfig remainingHuds = new AunConfigQol.RemainingHudsConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public CommandsConfig commands = new CommandsConfig();
-    public static class CommandsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean netherCalc = true;
-    }
+    public AunConfigQol.CommandsConfig commands = new AunConfigQol.CommandsConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public ScreenConfig screenSettings = new ScreenConfig();
-    public static class ScreenConfig {
-        @ConfigEntry.Gui.Tooltip public boolean noResourcePackWarning = true;
-        @ConfigEntry.Gui.Tooltip public boolean fastLanguageReload = true;
-        @ConfigEntry.Gui.Tooltip public boolean fastQuit = true;
-        @ConfigEntry.Gui.Tooltip public boolean fadelessLoading = true;
-        @ConfigEntry.Gui.Tooltip public boolean borderlessFullscreen = true;
-    }
+    public AunConfigQol.ScreenConfig screenSettings = new AunConfigQol.ScreenConfig();
 
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.CollapsibleObject
-    public HideNametagsConfig hideNametags = new HideNametagsConfig();
-    public static class HideNametagsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean hidePlayerNametags = false;
-        @ConfigEntry.Gui.Tooltip public boolean hideMobNametags = false;
-        @ConfigEntry.Gui.Tooltip public boolean hideHostileMobNametags = false;
-        @ConfigEntry.Gui.Tooltip public boolean hidePassiveMobNametags = false;
-        @ConfigEntry.Gui.Tooltip public boolean hideTamedMobNametags = false;
-        @ConfigEntry.Gui.Tooltip public String hiddenMobsList = "";
-    }
+    public AunConfigQol.HideNametagsConfig hideNametags = new AunConfigQol.HideNametagsConfig();
 
+    // Flat QOL toggles
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean cutThrough = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean doubleDoors = true;
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Tooltip public boolean fastLeafDecay = true;
@@ -138,75 +74,31 @@ public class AunConfig implements ConfigData {
 
     // =========================== VANILLA+ TAB ============================
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
-    public MobGriefingConfig mobGriefing = new MobGriefingConfig();
-    public static class MobGriefingConfig {
-        @ConfigEntry.Gui.Tooltip public boolean antiEndermanPickup = true;
-        @ConfigEntry.Gui.Tooltip public boolean antiCreeperGrief = true;
-        @ConfigEntry.Gui.Tooltip public boolean antiGhastGrief = true;
-        @ConfigEntry.Gui.Tooltip public boolean antiBlazeGrief = true;
-        @ConfigEntry.Gui.Tooltip public boolean antiRavagerGrief = true;
-        @ConfigEntry.Gui.Tooltip public boolean safeLightning = true;
-        @ConfigEntry.Gui.Tooltip public boolean noZombieDoorBreak = true;
-        @ConfigEntry.Gui.Tooltip public boolean noCropTrampleFeatherFalling = true;
-        @ConfigEntry.Gui.Tooltip public boolean noCropTrampleMobs = true;
-    }
+    public AunConfigVanillaPlus.MobGriefingConfig mobGriefing = new AunConfigVanillaPlus.MobGriefingConfig();
 
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
-    public InstaMineConfig instaMine = new InstaMineConfig();
-    public static class InstaMineConfig {
-        @ConfigEntry.Gui.Tooltip public boolean instaMineGlass = true;
-        @ConfigEntry.Gui.Tooltip public boolean instaMineDeepslateWithHaste = true;
-    }
+    public AunConfigVanillaPlus.InstaMineConfig instaMine = new AunConfigVanillaPlus.InstaMineConfig();
 
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
-    public HappyGhastConfig happyGhast = new HappyGhastConfig();
-    public static class HappyGhastConfig {
-        @ConfigEntry.Gui.Tooltip public boolean speedHappyGhast = true;
-        @ConfigEntry.Gui.Tooltip public boolean horizontalSpeedEnabled = true;
-        @ConfigEntry.Gui.Tooltip public String happyGhastHorizontalBoost = "100";
-        @ConfigEntry.Gui.Tooltip public boolean verticalSpeedEnabled = true;
-        @ConfigEntry.Gui.Tooltip public String happyGhastVerticalBoost = "100";
-    }
+    public AunConfigVanillaPlus.HappyGhastConfig happyGhast = new AunConfigVanillaPlus.HappyGhastConfig();
 
     @ConfigEntry.Category("vanillaPlus") @ConfigEntry.Gui.CollapsibleObject
-    public EssentialConfig essential = new EssentialConfig();
-    public static class EssentialConfig {
-        @ConfigEntry.Gui.Tooltip public boolean glowingTrims = true;
-        @ConfigEntry.Gui.Tooltip public boolean coralReborn = true;
-        @ConfigEntry.Gui.Tooltip public boolean moreDyes = true;
-        @ConfigEntry.Gui.Tooltip public boolean hideBeaconBeamBehindTintedGlass = true;
-        @ConfigEntry.Gui.Tooltip public boolean noBatSpawning = true;
-        @ConfigEntry.Gui.Tooltip public boolean anvilNoTooExpensive = true;
-        @ConfigEntry.Gui.Tooltip public boolean playerDropsNeverDespawn = true;
-        @ConfigEntry.Gui.Tooltip public boolean infiniteVillagerTrading = true;
-        @ConfigEntry.Gui.Tooltip public boolean enchantThroughFoliage = true;
-        @ConfigEntry.Gui.Tooltip public boolean trueVanillaGamemodeLock = false;
-    }
+    public AunConfigVanillaPlus.EssentialConfig essential = new AunConfigVanillaPlus.EssentialConfig();
 
     // ========================== PERFORMANCE TAB ==========================
     @ConfigEntry.Category("performance") @ConfigEntry.Gui.Tooltip public boolean stackingXp = true;
 
     // ============================= FIXES TAB =============================
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.CollapsibleObject
-    public McBugsConfig mcBugs = new McBugsConfig();
-    public static class McBugsConfig {
-        @ConfigEntry.Gui.Tooltip public boolean enderPearlFix = true;
-        @ConfigEntry.Gui.Tooltip public boolean stackedMinecartFix = true;
-        @ConfigEntry.Gui.Tooltip public boolean rocketElytraFix = true;
-        @ConfigEntry.Gui.Tooltip public boolean netherPortalFix = true;
-    }
+    public AunConfigFixes.McBugsConfig mcBugs = new AunConfigFixes.McBugsConfig();
 
     @ConfigEntry.Category("fixes") @ConfigEntry.Gui.CollapsibleObject
-    public OtherFixesConfig otherFixes = new OtherFixesConfig();
-    public static class OtherFixesConfig {
-        @ConfigEntry.Gui.Tooltip public boolean piglinPortalFix = true;
-        @ConfigEntry.Gui.Tooltip public boolean safeRedstone = true;
-        @ConfigEntry.Gui.Tooltip public boolean noAnimalTemptDelay = true;
-    }
+    public AunConfigFixes.OtherFixesConfig otherFixes = new AunConfigFixes.OtherFixesConfig();
 
     // ============= EXCLUDED MIRRORS =============
-    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded public transient GeneralSettingsConfig generalSettings = new GeneralSettingsConfig();
-    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient PlayerHudConfig hud = new PlayerHudConfig();
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded public transient AunConfigGeneral.GeneralSettingsConfig generalSettings = new AunConfigGeneral.GeneralSettingsConfig();
+    @ConfigEntry.Category("general") @ConfigEntry.Gui.Excluded public transient AunConfigGeneral.LanguageSubConfig languageSubConfig = new AunConfigGeneral.LanguageSubConfig();
+    @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient AunConfigQol.PlayerHudConfig hud = new AunConfigQol.PlayerHudConfig();
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient String zoomKey = "C", happyGhastBoost = "100", happyGhastHorizontalBoost = "100", happyGhastVerticalBoost = "100";
     @ConfigEntry.Category("qol") @ConfigEntry.Gui.Excluded public transient boolean modEnabled = true, kindaCheaty = false, clearWater = true, clearLava = true, clearPowderSnow = true, favouriteWorlds = true, worldPlaytimeDisplay = true, deletedWorldProtection = true, reachBehind = true, reachBehindSign = true, armorStandSwap = true, horseInfo = false, dismountOnClick = true, autoPickup = true, autoClimbLadders = true, autoTotem = true, closeCall = true, autoToolSwitch = true, simpleHarvest = true, stackRefill = true, betterF1 = true, disableNarrator = true, disableAdvancementKeybind = true, ctrlDropAllSameItems = true, bundleFix = true, moreChatHistory = true, hideArmor = true, centralCrosshair = true, raisedHotbar = true, chatTextCopy = true, headLocator = true, locatorBarCombination = true, recipeBookOrigin = true, chatHeads = true, hideOwnParticlesFirstPerson = true, hideOwnParticlesThirdPerson = true, bookScroll = true, zoom = true, dynamicLights = true, chestSearchBar = true, netherCalc = true, noResourcePackWarning = true, fastLanguageReload = true, fastQuit = true, fadelessLoading = true, borderlessFullscreen = true, safeLightning = true, noZombieDoorBreak = true, noCropTrampleFeatherFalling = true, noCropTrampleMobs = true, instaMineGlass = true, instaMineDeepslateWithHaste = true, speedHappyGhast = true, glowingTrims = true, coralReborn = true, hideBeaconBeamBehindTintedGlass = true, noBatSpawning = true, anvilNoTooExpensive = true, playerDropsNeverDespawn = true, infiniteVillagerTrading = true, enchantThroughFoliage = true, trueVanillaGamemodeLock = false, moreDyes = true, enderPearlFix = true, stackedMinecartFix = true, rocketElytraFix = true, netherPortalFix = true, piglinPortalFix = true, safeRedstone = true, noAnimalTemptDelay = true;
 
@@ -217,9 +109,28 @@ public class AunConfig implements ConfigData {
             modEnabled = general.modEnabled;
             kindaCheaty = general.kindaCheaty;
         }
-        if (kindaCheaty && autoSettings != null) {
-            autoSettings.autoTotem = false;
-            autoSettings.closeCall = false;
+        if (profile != null) {
+            profile.linkProfile = LinkAction.LINK;
+            profile.exportOwnProfile = ExportAction.EXPORT;
+        }
+        if (languageSub != null) {
+            languageSub.chooseLanguage = LanguageAction.CHOOSE_LANGUAGE;
+            if (languageSub.syncWithMinecraft && FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+                try {
+                    String mcLang = Minecraft.getInstance().getLanguageManager().getSelected();
+                    if (mcLang != null && !mcLang.isBlank()) {
+                        selectedLanguage = mcLang.toLowerCase(Locale.ROOT).replace('-', '_');
+                    }
+                } catch (Throwable ignored) {}
+            }
+        }
+        if (kindaCheaty) {
+            autoTotem = false;
+            closeCall = false;
+            if (autoSettings != null) {
+                autoSettings.autoTotem = false;
+                autoSettings.closeCall = false;
+            }
         }
         if (clearVision != null) { clearWater = clearVision.clearWater; clearLava = clearVision.clearLava; clearPowderSnow = clearVision.clearPowderSnow; }
         if (worldSettings != null) { favouriteWorlds = worldSettings.favouriteWorlds; worldPlaytimeDisplay = worldSettings.worldPlaytimeDisplay; deletedWorldProtection = worldSettings.deletedWorldProtection; }
