@@ -51,6 +51,10 @@ public class AunConfigScreen extends Screen {
     private static Button ourSaveButton = null;
     private static String lastAppliedLangCode = null;
 
+    private static Method fillMethod = null;
+    private static Method textMethod = null;
+    private static boolean searchedDrawMethods = false;
+
     private final Screen parent;
 
     public AunConfigScreen(Screen parent) {
@@ -63,11 +67,25 @@ public class AunConfigScreen extends Screen {
         return cfg.selectedLanguage != null && cfg.selectedLanguage.equalsIgnoreCase("cs_cz");
     }
 
+    public static void drawRect(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color) {
+        if (!searchedDrawMethods) {
+            searchedDrawMethods = true;
+            try { fillMethod = g.getClass().getMethod("fill", int.class, int.class, int.class, int.class, int.class); } catch (Throwable ignored) {}
+            try { textMethod = g.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class); } catch (Throwable ignored) {}
+        }
+        if (fillMethod != null) {
+            try { fillMethod.invoke(g, x1, y1, x2, y2, color); } catch (Throwable ignored) {}
+        }
+    }
+
     public static void drawCenteredTitle(GuiGraphicsExtractor graphics, Font font, String text, int x, int y) {
-        try {
-            Method m = graphics.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class);
-            m.invoke(graphics, font, text, x, y, 0xFFFFFFFF, true);
-        } catch (Throwable ignored) {}
+        if (!searchedDrawMethods) {
+            searchedDrawMethods = true;
+            try { textMethod = graphics.getClass().getMethod("text", Font.class, String.class, int.class, int.class, int.class, boolean.class); } catch (Throwable ignored) {}
+        }
+        if (textMethod != null) {
+            try { textMethod.invoke(graphics, font, text, x, y, 0xFFFFFFFF, true); } catch (Throwable ignored) {}
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -147,7 +165,9 @@ public class AunConfigScreen extends Screen {
             real.profile.linkProfile = AunConfig.LinkAction.LINK;
             real.profile.exportOwnProfile = AunConfig.ExportAction.EXPORT;
         }
-        real.languageWindow = AunConfig.LanguageAction.LANGUAGE;
+        if (real.languageSub != null) {
+            real.languageSub.chooseLanguage = AunConfig.LanguageAction.CHOOSE_LANGUAGE;
+        }
         applyModLanguage(real.selectedLanguage);
 
         initialProfileModeOnOpen = real.profile != null ? real.profile.profileMode : AunConfig.ProfileMode.DEFAULT;
@@ -186,12 +206,46 @@ public class AunConfigScreen extends Screen {
             applyModLanguage(realCfg.selectedLanguage);
         }
 
+        // Handle "Kinda Cheaty" graying out Auto Totem and It Was Close (Auto Save Your Stuff)
+        if (realCfg.general != null && realCfg.general.kindaCheaty) {
+            hideOrDisableCheatyEntries(screen);
+        }
+
         layoutBottomBarButtons(screen);
 
         AbstractSelectionList<?> listWidget = findListWidget(screen);
         if (listWidget != null) {
             Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
             checkEntriesForSubWindowOpen(screen, listWidget.children(), visited, 0);
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void hideOrDisableCheatyEntries(Screen screen) {
+        AbstractSelectionList<?> listWidget = findListWidget(screen);
+        if (listWidget == null) return;
+        for (Object entry : listWidget.children()) {
+            if (entry == null) return;
+            try {
+                String str = entry.toString().toLowerCase(Locale.ROOT);
+                if (str.contains("autototem") || str.contains("closecall") || str.contains("auto save")) {
+                    for (Field f : entry.getClass().getDeclaredFields()) {
+                        f.setAccessible(true);
+                        Object val = f.get(entry);
+                        if (val instanceof Button btn) {
+                            btn.active = false;
+                            btn.setMessage(Component.literal("§8DISABLED"));
+                        } else if (val instanceof Collection col) {
+                            for (Object item : col) {
+                                if (item instanceof Button b2) {
+                                    b2.active = false;
+                                    b2.setMessage(Component.literal("§8DISABLED"));
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
         }
     }
 
@@ -223,14 +277,11 @@ public class AunConfigScreen extends Screen {
         if (val == AunConfig.LanguageAction.OPEN_LANGUAGE) {
             resetSelectionEntryIndex(node);
             invokeClothSaveAll(screen);
-            AunConfigManager.getRealConfig().languageWindow = AunConfig.LanguageAction.LANGUAGE;
+            AunConfigManager.getRealConfig().languageSub.chooseLanguage = AunConfig.LanguageAction.CHOOSE_LANGUAGE;
             Minecraft.getInstance().setScreenAndShow(new AunLanguageScreen(screen));
             return;
         }
 
-        if (val instanceof Collection<?> subCol) {
-            checkEntriesForSubWindowOpen(screen, subCol, visited, depth + 1);
-        }
         if (node instanceof ContainerEventHandler ceh) {
             checkEntriesForSubWindowOpen(screen, ceh.children(), visited, depth + 1);
         }
@@ -434,11 +485,13 @@ public class AunConfigScreen extends Screen {
             setAllBooleans(cfg, false);
         } else if (cfg.profile.profileMode == AunConfig.ProfileMode.DEFAULT) {
             boolean keepModEnabled = cfg.general.modEnabled;
+            boolean keepCheaty = cfg.general.kindaCheaty;
             String keepToggleKey = cfg.general.toggleKey;
             String keepLang = cfg.selectedLanguage;
             AunConfig def = new AunConfig();
             copyConfigValues(def, cfg);
             cfg.general.modEnabled = keepModEnabled;
+            cfg.general.kindaCheaty = keepCheaty;
             cfg.general.toggleKey = keepToggleKey;
             cfg.selectedLanguage = keepLang;
             cfg.profile.profileMode = AunConfig.ProfileMode.DEFAULT;
@@ -452,8 +505,10 @@ public class AunConfigScreen extends Screen {
                         AunConfig loaded = GSON.fromJson(Files.readString(candidate, StandardCharsets.UTF_8), AunConfig.class);
                         if (loaded != null) {
                             String keepLang = cfg.selectedLanguage;
+                            boolean keepCheaty = cfg.general.kindaCheaty;
                             copyConfigValues(loaded, cfg);
                             cfg.selectedLanguage = keepLang;
+                            cfg.general.kindaCheaty = keepCheaty;
                             cfg.profile.customProfilePath = name;
                             cfg.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
                         }
@@ -480,8 +535,10 @@ public class AunConfigScreen extends Screen {
                 if (loaded != null) {
                     AunConfig current = AunConfigManager.getRealConfig();
                     String keepLang = current.selectedLanguage;
+                    boolean keepCheaty = current.general.kindaCheaty;
                     copyConfigValues(loaded, current);
                     current.selectedLanguage = keepLang;
+                    current.general.kindaCheaty = keepCheaty;
                     if (current.profile != null) {
                         current.profile.customProfilePath = displayFileName;
                         current.profile.profileMode = AunConfig.ProfileMode.OWN_PROFILE;
@@ -524,7 +581,7 @@ public class AunConfigScreen extends Screen {
             try {
                 f.setAccessible(true);
                 if (f.getType() == boolean.class) {
-                    if (obj instanceof AunConfig.GeneralSettingsConfig && f.getName().equals("modEnabled")) {
+                    if (obj instanceof AunConfig.GeneralSettingsConfig && (f.getName().equals("modEnabled") || f.getName().equals("kindaCheaty"))) {
                         continue;
                     } else if (obj instanceof AunConfig.EntitiesConfig && f.getName().equals("horseInfo")) {
                         f.setBoolean(obj, false);
