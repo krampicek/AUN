@@ -1,5 +1,6 @@
 package dev.example.aun.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -32,8 +33,8 @@ public class AunLoadProfileScreen extends Screen {
         }
 
         int centerX = this.width / 2;
-        int listTop = this.height / 2 - 60;
-        int colWidth = 220;
+        int listTop = this.height / 2 - 50;
+        int colWidth = 240;
 
         int maxScroll = Math.max(0, this.profileFiles.size() - MAX_VISIBLE);
         if (this.scrollOffset > maxScroll) this.scrollOffset = maxScroll;
@@ -67,19 +68,19 @@ public class AunLoadProfileScreen extends Screen {
             }).bounds(centerX + colWidth / 2 + 6, listTop + (MAX_VISIBLE - 1) * 22, 20, 20).build());
         }
 
-        int bottomY = this.height - 32;
+        int bottomY = this.height / 2 + 84;
         boolean cz = AunConfigScreen.isCzechSelected();
 
         this.addRenderableWidget(Button.builder(Component.literal(cz ? "Zrušit" : "Cancel"), btn -> {
-            AunConfigScreen.reopenClothScreen(this.parent);
-        }).bounds(centerX - 108, bottomY, 104, 20).build());
+            Minecraft.getInstance().setScreenAndShow(this.parent);
+        }).bounds(centerX - 116, bottomY, 110, 20).build());
 
         this.loadButton = Button.builder(Component.literal(cz ? "Načíst" : "Load"), btn -> {
             if (this.selectedProfile != null && !this.selectedProfile.isBlank()) {
                 Path file = AunConfigScreen.getLoadableProfilesDir().resolve(this.selectedProfile);
                 AunConfigScreen.loadProfileFromFile(file, this.selectedProfile, this.parent);
             }
-        }).bounds(centerX + 4, bottomY, 104, 20).build();
+        }).bounds(centerX + 6, bottomY, 110, 20).build();
         this.loadButton.active = (this.selectedProfile != null && !this.selectedProfile.isBlank());
         this.addRenderableWidget(this.loadButton);
     }
@@ -101,16 +102,40 @@ public class AunLoadProfileScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+        if (this.parent != null) {
+            try {
+                Method m = this.parent.getClass().getMethod("extractRenderState", GuiGraphicsExtractor.class, int.class, int.class, float.class);
+                m.invoke(this.parent, graphics, -1, -1, a);
+            } catch (Throwable ignored) {
+                try {
+                    Method m2 = this.parent.getClass().getMethod("render", GuiGraphicsExtractor.class, int.class, int.class, float.class);
+                    m2.invoke(this.parent, graphics, -1, -1, a);
+                } catch (Throwable ignored2) {}
+            }
+        }
+
+        int centerX = this.width / 2;
+        int centerY = this.height / 2;
+        int boxW = 280;
+        int boxH = 200;
+        int boxX = centerX - boxW / 2;
+        int boxY = centerY - boxH / 2;
+
+        AunConfigScreen.drawRect(graphics, boxX - 1, boxY - 1, boxX + boxW + 1, boxY + boxH + 1, 0xFFFFFFFF);
+        AunConfigScreen.drawRect(graphics, boxX, boxY, boxX + boxW, boxY + boxH, 0xFF181818);
+
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        String titleText = AunConfigScreen.isCzechSelected() ? "Vyberte profil k načtení" : "Select Profile to Load";
-        int titleX = this.width / 2 - this.font.width(titleText) / 2;
-        int titleY = this.height / 2 - 82;
+
+        boolean cz = AunConfigScreen.isCzechSelected();
+        String titleText = cz ? "Vyberte profil k načtení" : "Select Profile to Load";
+        int titleX = centerX - this.font.width(titleText) / 2;
+        int titleY = boxY + 12;
         AunConfigScreen.drawCenteredTitle(graphics, this.font, titleText, titleX, titleY);
     }
 
     @Override
     public void onClose() {
-        AunConfigScreen.reopenClothScreen(this.parent);
+        Minecraft.getInstance().setScreenAndShow(this.parent);
     }
 }
 // END OF FILE
