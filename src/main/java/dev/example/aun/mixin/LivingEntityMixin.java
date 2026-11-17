@@ -2,7 +2,6 @@ package dev.example.aun.mixin;
 
 import dev.example.aun.config.AunConfig;
 import dev.example.aun.config.AunConfigManager;
-import dev.example.aun.config.AunConfigQol;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
@@ -45,7 +44,7 @@ public abstract class LivingEntityMixin {
         AunConfig generalCfg = AunConfigManager.get();
         if (generalCfg == null || generalCfg.hideNametags == null) return false;
 
-        AunConfigQol.HideNametagsConfig cfg = generalCfg.hideNametags;
+        AunConfig.HideNametagsConfig cfg = generalCfg.hideNametags;
         
         if (generalCfg.general != null && !generalCfg.general.modEnabled) {
             return false;
